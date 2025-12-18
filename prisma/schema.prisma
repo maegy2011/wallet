@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Wallet {
+  id              String   @id @default(cuid())
+  name            String
+  mobileNumber    String   @unique
+  logo            String?
+  balance         Float    @default(0)
+  totalDeposits   Float    @default(0)
+  totalWithdrawals Float   @default(0)
+  monthlyTransactions Float @default(0)
+  monthlyLimit    Float    @default(200000)
+  feeType         String   @default("percentage") // 'percentage', 'perThousand', 'fixed'
+  feePercentage   Float    @default(0) // Percentage fee (e.g., 2.5 for 2.5%)
+  feePerThousand  Float    @default(0) // Fee amount per 1000 EGP (e.g., 5 for 5 EGP per 1000)
+  maxFeeAmount    Float    @default(0) // Maximum fee amount in Egyptian Pounds
+  totalFeesEarned Float    @default(0) // Total fees earned by merchant
+  isArchived      Boolean  @default(false) // Soft delete flag
+  archivedAt      DateTime? // Archive timestamp
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  transactions    Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  type        String   // 'deposit' or 'withdrawal'
+  amount      Float
+  feeAmount   Float    @default(0) // Fee charged for this transaction
+  description String
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
