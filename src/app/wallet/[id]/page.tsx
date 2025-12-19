@@ -901,6 +901,8 @@ export default function WalletDetail() {
                 />
               </div>
             )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

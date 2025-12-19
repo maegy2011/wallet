@@ -35,19 +35,65 @@ model Wallet {
   updatedAt       DateTime @updatedAt
   
   transactions    Transaction[]
+  transfersFrom   Transfer[] @relation("TransferFrom")
+  transfersTo     Transfer[] @relation("TransferTo")
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
-  walletId    String
-  type        String   // 'deposit' or 'withdrawal'
-  amount      Float
-  feeAmount   Float    @default(0) // Fee charged for this transaction
-  description String
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id                  String   @id @default(cuid())
+  walletId            String
+  type                String   // 'deposit', 'withdrawal', 'transfer'
+  amount              Float
+  feeAmount           Float    @default(0) // Fee charged for this transaction
+  description         String
+  date                DateTime @default(now())
+  createdAt           DateTime @default(now())
+  cashTreasuryCoverage Float  @default(0) // Amount covered by cash treasury (0 = full amount, >0 = partial coverage)
+  isFullyCovered      Boolean @default(true) // true = fully covered by cash treasury, false = partially covered
   
-  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  wallet              Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model CashTreasury {
+  id              String   @id @default(cuid())
+  balance         Float    @default(0)
+  totalDeposits   Float    @default(0)
+  totalWithdrawals Float   @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  transactions    CashTreasuryTransaction[]
+  transfers       Transfer[]
+}
+
+model CashTreasuryTransaction {
+  id              String   @id @default(cuid())
+  type            String   // 'deposit', 'withdrawal', 'transfer_in', 'transfer_out'
+  amount          Float
+  description     String
+  referenceId     String?  // Reference to wallet ID for transfers
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  cashTreasury    CashTreasury @relation(fields: [cashTreasuryId], references: [id], onDelete: Cascade)
+  cashTreasuryId  String
+}
+
+model Transfer {
+  id              String   @id @default(cuid())
+  fromWalletId    String?
+  toWalletId      String?
+  fromCashTreasury Boolean @default(false)
+  toCashTreasury  Boolean @default(false)
+  amount          Float
+  description     String
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  fromWallet      Wallet?       @relation("TransferFrom", fields: [fromWalletId], references: [id], onDelete: Cascade)
+  toWallet        Wallet?       @relation("TransferTo", fields: [toWalletId], references: [id], onDelete: Cascade)
+  cashTreasury    CashTreasury  @relation(fields: [cashTreasuryId], references: [id], onDelete: Cascade)
+  cashTreasuryId  String
 }
 
 model Settings {

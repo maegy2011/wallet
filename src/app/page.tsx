@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign } from 'lucide-react'
+import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign, ArrowUpRight, ArrowDownRight, PiggyBank } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import NumberPad from '@/components/ui/number-pad'
 
@@ -49,9 +49,29 @@ interface Transaction {
   walletName: string
 }
 
+interface CashTreasury {
+  id: string
+  balance: number
+  totalDeposits: number
+  totalWithdrawals: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface CashTreasuryTransaction {
+  id: string
+  type: string
+  amount: number
+  description: string
+  date: string
+  createdAt: string
+}
+
 export default function WalletManagement() {
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [cashTreasury, setCashTreasury] = useState<CashTreasury | null>(null)
+  const [cashTreasuryTransactions, setCashTreasuryTransactions] = useState<CashTreasuryTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddWallet, setShowAddWallet] = useState(false)
   const [showEditWallet, setShowEditWallet] = useState(false)
@@ -230,7 +250,31 @@ export default function WalletManagement() {
     return wallets.reduce((total, wallet) => total + (wallet.totalFeesEarned || 0), 0)
   }, [wallets])
 
+  // Calculate monthly return rate
+  const calculateMonthlyReturnRate = () => {
+    if (!cashTreasury || cashTreasury.totalDeposits === 0) return 0
+    const currentMonth = new Date().getMonth()
+    const currentYear = new Date().getFullYear()
+    
+    const monthlyTransactions = cashTreasuryTransactions.filter(t => {
+      const transactionDate = new Date(t.date)
+      return transactionDate.getMonth() === currentMonth && 
+             transactionDate.getFullYear() === currentYear
+    })
+
+    const monthlyDeposits = monthlyTransactions
+      .filter(t => t.type === 'deposit')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const monthlyWithdrawals = monthlyTransactions
+      .filter(t => t.type === 'withdrawal')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    return monthlyDeposits > 0 ? ((monthlyDeposits - monthlyWithdrawals) / monthlyDeposits * 100) : 0
+  }
+
   const stats = useMemo(() => calculateMonthlyStats(), [transactions])
+  const monthlyReturnRate = useMemo(() => calculateMonthlyReturnRate(), [cashTreasury, cashTreasuryTransactions])
 
   // Update monthly limit state when stats change
   useEffect(() => {
@@ -248,20 +292,26 @@ export default function WalletManagement() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletsResponse, transactionsResponse, settingsResponse] = await Promise.all([
+        const [walletsResponse, transactionsResponse, settingsResponse, cashTreasuryResponse, cashTreasuryTransactionsResponse] = await Promise.all([
           fetch('/api/wallets'),
           fetch('/api/transactions'),
-          fetch('/api/settings')
+          fetch('/api/settings'),
+          fetch('/api/cash-treasury'),
+          fetch('/api/cash-treasury/transactions')
         ])
         
-        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok) {
-          const [walletsData, transactionsData, settingsData] = await Promise.all([
+        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok && cashTreasuryResponse.ok && cashTreasuryTransactionsResponse.ok) {
+          const [walletsData, transactionsData, settingsData, cashTreasuryData, cashTreasuryTransactionsData] = await Promise.all([
             walletsResponse.json(),
             transactionsResponse.json(),
-            settingsResponse.json()
+            settingsResponse.json(),
+            cashTreasuryResponse.json(),
+            cashTreasuryTransactionsResponse.json()
           ])
           setWallets(walletsData)
           setTransactions(transactionsData)
+          setCashTreasury(cashTreasuryData)
+          setCashTreasuryTransactions(cashTreasuryTransactionsData)
           setAppSettings({
             numberPadEnabled: settingsData.numberPadEnabled || 'false'
           })
@@ -625,6 +675,15 @@ export default function WalletManagement() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => router.push('/cash-treasury')}
+                className="flex items-center gap-2"
+              >
+                <PiggyBank className="h-4 w-4" />
+                <span className="hidden sm:inline">خزينة الكاش</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => router.push('/settings')}
                 className="flex items-center gap-2"
               >
@@ -676,23 +735,23 @@ export default function WalletManagement() {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي الرسوم</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium">رصيد خزينة الكاش</CardTitle>
+              <PiggyBank className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalFeesAcrossAllWallets.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{cashTreasury?.balance.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي المعاملات</CardTitle>
-              <BarChart3 className="h-4 w-4 text-purple-600" />
+              <CardTitle className="text-sm font-medium">نسبة العائد الشهري</CardTitle>
+              <ArrowUpRight className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.transactionCount}</div>
-              <p className="text-xs text-muted-foreground">{stats.monthName} {stats.year}</p>
+              <div className="text-2xl font-bold">{monthlyReturnRate.toFixed(2)}%</div>
+              <p className="text-xs text-muted-foreground">هذا الشهر</p>
             </CardContent>
           </Card>
         </div>
