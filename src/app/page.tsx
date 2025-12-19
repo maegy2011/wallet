@@ -16,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import NumberPad from '@/components/ui/number-pad'
 
 interface Wallet {
   id: string
@@ -63,6 +64,9 @@ export default function WalletManagement() {
   const [alertMessage, setAlertMessage] = useState('')
   const [showWalletDialog, setShowWalletDialog] = useState(false)
   const [lastUsedWalletId, setLastUsedWalletId] = useState<string>('')
+  const [appSettings, setAppSettings] = useState({
+    numberPadEnabled: 'false'
+  })
 
   // Form states
   const [walletForm, setWalletForm] = useState({
@@ -244,18 +248,23 @@ export default function WalletManagement() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletsResponse, transactionsResponse] = await Promise.all([
+        const [walletsResponse, transactionsResponse, settingsResponse] = await Promise.all([
           fetch('/api/wallets'),
-          fetch('/api/transactions')
+          fetch('/api/transactions'),
+          fetch('/api/settings')
         ])
         
-        if (walletsResponse.ok && transactionsResponse.ok) {
-          const [walletsData, transactionsData] = await Promise.all([
+        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok) {
+          const [walletsData, transactionsData, settingsData] = await Promise.all([
             walletsResponse.json(),
-            transactionsResponse.json()
+            transactionsResponse.json(),
+            settingsResponse.json()
           ])
           setWallets(walletsData)
           setTransactions(transactionsData)
+          setAppSettings({
+            numberPadEnabled: settingsData.numberPadEnabled || 'false'
+          })
           
           // Set last used wallet (most recent transaction)
           if (transactionsData.length > 0) {
@@ -642,7 +651,7 @@ export default function WalletManagement() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">إيداع هذا الشهر</CardTitle>
@@ -673,6 +682,17 @@ export default function WalletManagement() {
             <CardContent>
               <div className="text-2xl font-bold">{totalFeesAcrossAllWallets.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">جنيه</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">إجمالي المعاملات</CardTitle>
+              <BarChart3 className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.transactionCount}</div>
+              <p className="text-xs text-muted-foreground">{stats.monthName} {stats.year}</p>
             </CardContent>
           </Card>
         </div>
@@ -797,7 +817,20 @@ export default function WalletManagement() {
           </div>
         </div>
 
-        {/* Add Wallet Dialog */}
+        {/* Floating Action Button */}
+      {hasActiveWallets && (
+        <div className="fixed bottom-6 left-6 z-50">
+          <Button
+            onClick={() => setShowTransaction(true)}
+            size="lg"
+            className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
+
+      {/* Add Wallet Dialog */}
         <Dialog open={showAddWallet} onOpenChange={setShowAddWallet}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -925,116 +958,160 @@ export default function WalletManagement() {
 
         {/* Add Transaction Dialog */}
         <Dialog open={showTransaction} onOpenChange={setShowTransaction}>
-          <DialogContent className="max-w-md">
+          <DialogContent className={`max-w-md ${appSettings.numberPadEnabled === 'true' ? 'max-w-2xl' : 'max-w-md'}`}>
             <DialogHeader>
               <DialogTitle>إضافة حركة جديدة</DialogTitle>
               <DialogDescription>
                 أدخل بيانات الحركة المالية
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="walletId">المحفظة</Label>
-                <Select value={transactionForm.walletId} onValueChange={(value) => setTransactionForm({ ...transactionForm, walletId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر المحفظة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeWallets.map((wallet) => (
-                      <SelectItem key={wallet.id} value={wallet.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{wallet.logo || '🏦'}</span>
-                          <div>
-                            <span>{wallet.name}</span>
-                            <span className="text-xs text-muted-foreground mr-2">{wallet.mobileNumber}</span>
+            <div className={`space-y-4 ${appSettings.numberPadEnabled === 'true' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="walletId">المحفظة</Label>
+                  <Select value={transactionForm.walletId} onValueChange={(value) => setTransactionForm({ ...transactionForm, walletId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المحفظة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeWallets.map((wallet) => (
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{wallet.logo || '🏦'}</span>
+                            <div>
+                              <span>{wallet.name}</span>
+                              <span className="text-xs text-muted-foreground mr-2">{wallet.mobileNumber}</span>
+                            </div>
                           </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="type">نوع الحركة</Label>
-                <Select value={transactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setTransactionForm({ ...transactionForm, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="deposit">إيداع</SelectItem>
-                    <SelectItem value="withdrawal">سحب</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <Label htmlFor="type">نوع الحركة</Label>
+                  <Select value={transactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setTransactionForm({ ...transactionForm, type: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="deposit">إيداع</SelectItem>
+                      <SelectItem value="withdrawal">سحب</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="amount">المبلغ</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  inputMode="numeric"
-                  step="0.01"
-                  value={transactionForm.amount}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9.]/g, '')
-                    setTransactionForm({ ...transactionForm, amount: value })
-                  }}
-                  placeholder="0.00"
-                />
-                {transactionForm.walletId && transactionForm.amount && (
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {(() => {
-                      const amount = parseFloat(transactionForm.amount)
-                      if (!isNaN(amount) && amount > 0) {
-                        const { fee, total } = calculateTotalWithFee(transactionForm.walletId, amount)
-                        return (
-                          <div>
-                            <p>الرسوم: {fee.toFixed(2)} جنيه</p>
-                            <p>الإجمالي: {total.toFixed(2)} جنيه</p>
-                          </div>
-                        )
+                <div>
+                  <Label htmlFor="amount">المبلغ</Label>
+                  <Input
+                    id="amount"
+                    type="text"
+                    inputMode="none"
+                    readOnly={appSettings.numberPadEnabled === 'true'}
+                    step="0.01"
+                    value={transactionForm.amount}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '')
+                      setTransactionForm({ ...transactionForm, amount: value })
+                    }}
+                    placeholder="0.00"
+                    onClick={(e) => {
+                      if (appSettings.numberPadEnabled === 'true') {
+                        e.preventDefault()
+                        e.currentTarget.blur()
                       }
-                      return null
-                    })()}
-                  </div>
-                )}
+                    }}
+                    onFocus={(e) => {
+                      if (appSettings.numberPadEnabled === 'true') {
+                        e.preventDefault()
+                        e.currentTarget.blur()
+                      }
+                    }}
+                    className={appSettings.numberPadEnabled === 'true' ? 'cursor-pointer' : ''}
+                  />
+                  {appSettings.numberPadEnabled === 'true' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      استخدم لوحة الأرقام المدمجة لإدخال المبلغ
+                    </p>
+                  )}
+                  {transactionForm.walletId && transactionForm.amount && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {(() => {
+                        const amount = parseFloat(transactionForm.amount)
+                        if (!isNaN(amount) && amount > 0) {
+                          const { fee, total } = calculateTotalWithFee(transactionForm.walletId, amount)
+                          return (
+                            <div>
+                              <p>الرسوم: {fee.toFixed(2)} جنيه</p>
+                              <p>الإجمالي: {total.toFixed(2)} جنيه</p>
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="description">الوصف (اختياري)</Label>
+                  <Textarea
+                    id="description"
+                    value={transactionForm.description}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
+                    placeholder="أدخل وصف الحركة"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={handleAddTransaction} disabled={transactionProcessing} className="flex-1">
+                    {transactionProcessing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                    إضافة الحركة
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowTransaction(false)} className="flex-1">
+                    إلغاء
+                  </Button>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="description">الوصف (اختياري)</Label>
-                <Textarea
-                  id="description"
-                  value={transactionForm.description}
-                  onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
-                  placeholder="أدخل وصف الحركة"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleAddTransaction} disabled={transactionProcessing} className="flex-1">
-                  {transactionProcessing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
-                  إضافة الحركة
-                </Button>
-                <Button variant="outline" onClick={() => setShowTransaction(false)} className="flex-1">
-                  إلغاء
-                </Button>
-              </div>
+              {/* Number Pad */}
+              {appSettings.numberPadEnabled === 'true' && (
+                <div className="lg:mt-0 mt-6">
+                  <NumberPad
+                    value={transactionForm.amount}
+                    onChange={(value) => setTransactionForm({ ...transactionForm, amount: value })}
+                    onClear={() => setTransactionForm({ ...transactionForm, amount: '' })}
+                    onSubmit={handleAddTransaction}
+                    placeholder="0.00"
+                    disabled={transactionProcessing}
+                    maxLength={10}
+                    onInputClick={() => {
+                      // Focus the input field briefly to trigger any focus effects
+                      const amountInput = document.getElementById('amount') as HTMLInputElement
+                      if (amountInput) {
+                        amountInput.focus()
+                        setTimeout(() => amountInput.blur(), 100)
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Edit Transaction Dialog */}
         <Dialog open={showEditTransaction} onOpenChange={setShowEditTransaction}>
-          <DialogContent className="max-w-md">
+          <DialogContent className={`max-w-md ${appSettings.numberPadEnabled === 'true' ? 'max-w-2xl' : 'max-w-md'}`}>
             <DialogHeader>
               <DialogTitle>تعديل الحركة</DialogTitle>
               <DialogDescription>
                 عدل بيانات الحركة المالية
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className={`space-y-4 ${appSettings.numberPadEnabled === 'true' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
               <div>
                 <Label htmlFor="edit-walletId">المحفظة</Label>
                 <Select value={editTransactionForm.walletId} onValueChange={(value) => setEditTransactionForm({ ...editTransactionForm, walletId: value })}>
@@ -1074,8 +1151,9 @@ export default function WalletManagement() {
                 <Label htmlFor="edit-amount">المبلغ</Label>
                 <Input
                   id="edit-amount"
-                  type="number"
-                  inputMode="numeric"
+                  type="text"
+                  inputMode="none"
+                  readOnly={appSettings.numberPadEnabled === 'true'}
                   step="0.01"
                   value={editTransactionForm.amount}
                   onChange={(e) => {
@@ -1083,7 +1161,25 @@ export default function WalletManagement() {
                     setEditTransactionForm({ ...editTransactionForm, amount: value })
                   }}
                   placeholder="0.00"
+                  onClick={(e) => {
+                    if (appSettings.numberPadEnabled === 'true') {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  onFocus={(e) => {
+                    if (appSettings.numberPadEnabled === 'true') {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  className={appSettings.numberPadEnabled === 'true' ? 'cursor-pointer' : ''}
                 />
+                {appSettings.numberPadEnabled === 'true' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    استخدم لوحة الأرقام المدمجة لإدخال المبلغ
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1107,6 +1203,29 @@ export default function WalletManagement() {
                 </Button>
               </div>
             </div>
+
+            {/* Number Pad */}
+            {appSettings.numberPadEnabled === 'true' && (
+              <div className="lg:mt-0 mt-6">
+                <NumberPad
+                  value={editTransactionForm.amount}
+                  onChange={(value) => setEditTransactionForm({ ...editTransactionForm, amount: value })}
+                  onClear={() => setEditTransactionForm({ ...editTransactionForm, amount: '' })}
+                  onSubmit={handleUpdateTransaction}
+                  placeholder="0.00"
+                  disabled={transactionProcessing}
+                  maxLength={10}
+                  onInputClick={() => {
+                    // Focus on input field briefly to trigger any focus effects
+                    const amountInput = document.getElementById('edit-amount') as HTMLInputElement
+                    if (amountInput) {
+                      amountInput.focus()
+                      setTimeout(() => amountInput.blur(), 100)
+                    }
+                  }}
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

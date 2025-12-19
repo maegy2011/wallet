@@ -10,7 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Download, Upload, Trash2, Settings, Database, Archive, RefreshCw, Loader2, Smartphone, Home } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { ArrowLeft, Download, Upload, Trash2, Settings, Database, Archive, RefreshCw, Loader2, Smartphone, Home, Calculator } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface Wallet {
@@ -52,6 +53,9 @@ export default function SettingsPage() {
   const [isClearingData, setIsClearingData] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [appSettings, setAppSettings] = useState({
+    numberPadEnabled: 'false'
+  })
   
   const router = useRouter()
 
@@ -59,18 +63,23 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletsResponse, transactionsResponse] = await Promise.all([
+        const [walletsResponse, transactionsResponse, settingsResponse] = await Promise.all([
           fetch('/api/wallets'),
-          fetch('/api/transactions')
+          fetch('/api/transactions'),
+          fetch('/api/settings')
         ])
         
-        if (walletsResponse.ok && transactionsResponse.ok) {
-          const [walletsData, transactionsData] = await Promise.all([
+        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok) {
+          const [walletsData, transactionsData, settingsData] = await Promise.all([
             walletsResponse.json(),
-            transactionsResponse.json()
+            transactionsResponse.json(),
+            settingsResponse.json()
           ])
           setWallets(walletsData)
           setTransactions(transactionsData)
+          setAppSettings({
+            numberPadEnabled: settingsData.numberPadEnabled || 'false'
+          })
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -144,6 +153,30 @@ export default function SettingsPage() {
       setAlertMessage('حدث خطأ أثناء حذف البيانات')
     } finally {
       setIsClearingData(false)
+    }
+  }
+
+  // Handle settings toggle
+  const handleSettingToggle = async (key: string, value: boolean) => {
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key,
+          value: value.toString()
+        })
+      })
+
+      if (response.ok) {
+        setAppSettings(prev => ({
+          ...prev,
+          [key]: value.toString()
+        }))
+        setAlertMessage('تم تحديث الإعدادات بنجاح')
+      }
+    } catch (error) {
+      setAlertMessage('حدث خطأ أثناء تحديث الإعدادات')
     }
   }
 
@@ -301,12 +334,42 @@ export default function SettingsPage() {
         )}
 
         {/* Settings Tabs */}
-        <Tabs defaultValue="archived" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general">عام</TabsTrigger>
             <TabsTrigger value="archived">المحافظ المؤرشفة</TabsTrigger>
             <TabsTrigger value="data">إدارة البيانات</TabsTrigger>
             <TabsTrigger value="backup">النسخ الاحتياطي</TabsTrigger>
           </TabsList>
+
+          {/* General Settings Tab */}
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  الإعدادات العامة
+                </CardTitle>
+                <CardDescription>
+                  تخصيص إعدادات التطبيق والمظهر
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">لوحة الأرقام الرقمية</Label>
+                    <p className="text-sm text-muted-foreground">
+                      تفعيل لوحة أرقام مدمجة مع دعم اللمس والاهتزاز في نماذج إدخال المبالغ
+                    </p>
+                  </div>
+                  <Switch
+                    checked={appSettings.numberPadEnabled === 'true'}
+                    onCheckedChange={(checked) => handleSettingToggle('numberPadEnabled', checked)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Archived Wallets Tab */}
           <TabsContent value="archived">

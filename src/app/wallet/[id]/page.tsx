@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Edit, Trash2, ArrowLeft, Loader2, Smartphone, DollarSign, Calendar, Eye } from 'lucide-react'
+import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Edit, Trash2, ArrowLeft, Loader2, Smartphone, DollarSign, Calendar, Eye, Archive } from 'lucide-react'
+import NumberPad from '@/components/ui/number-pad'
 
 interface Wallet {
   id: string
@@ -59,6 +60,9 @@ export default function WalletDetail() {
   const [transactionProcessing, setTransactionProcessing] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [appSettings, setAppSettings] = useState({
+    numberPadEnabled: 'false'
+  })
 
   const [transactionForm, setTransactionForm] = useState({
     walletId: walletId,
@@ -159,18 +163,23 @@ export default function WalletDetail() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [walletResponse, transactionsResponse] = await Promise.all([
+        const [walletResponse, transactionsResponse, settingsResponse] = await Promise.all([
           fetch(`/api/wallets/${walletId}`),
-          fetch('/api/transactions')
+          fetch('/api/transactions'),
+          fetch('/api/settings')
         ])
         
-        if (walletResponse.ok && transactionsResponse.ok) {
-          const [walletData, transactionsData] = await Promise.all([
+        if (walletResponse.ok && transactionsResponse.ok && settingsResponse.ok) {
+          const [walletData, transactionsData, settingsData] = await Promise.all([
             walletResponse.json(),
-            transactionsResponse.json()
+            transactionsResponse.json(),
+            settingsResponse.json()
           ])
           setWallet(walletData)
           setTransactions(transactionsData.filter((t: Transaction) => t.walletId === walletId))
+          setAppSettings({
+            numberPadEnabled: settingsData.numberPadEnabled || 'false'
+          })
         } else {
           setAlertMessage('المحفظة غير موجودة')
           router.push('/')
@@ -337,6 +346,23 @@ export default function WalletDetail() {
     }
   }
 
+  const handleArchiveWallet = async () => {
+    try {
+      const response = await fetch(`/api/wallets/${walletId}/archive`, {
+        method: 'PUT'
+      })
+
+      if (response.ok) {
+        setAlertMessage('تم أرشفة المحفظة بنجاح')
+        setTimeout(() => {
+          router.push('/')
+        }, 1500)
+      }
+    } catch (error) {
+      setAlertMessage('حدث خطأ أثناء أرشفة المحفظة')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -367,26 +393,50 @@ export default function WalletDetail() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              العودة
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">{wallet.logo || '🏦'}</div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">{wallet.name}</h1>
-                <p className="text-muted-foreground flex items-center gap-1">
-                  <Smartphone className="h-4 w-4" />
-                  {wallet.mobileNumber}
-                </p>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                العودة
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="text-3xl">{wallet.logo || '🏦'}</div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">{wallet.name}</h1>
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    <Smartphone className="h-4 w-4" />
+                    {wallet.mobileNumber}
+                  </p>
+                </div>
               </div>
             </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Archive className="h-4 w-4" />
+                  أرشفة المحفظة
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد الأرشفة</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد من أرشفة محفظة "{wallet.name}"؟ سيتم إخفاؤها من القائمة الرئيسية ولكن يمكن استعادتها لاحقاً من الإعدادات.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleArchiveWallet}>
+                    أرشفة
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
@@ -626,95 +676,139 @@ export default function WalletDetail() {
 
         {/* Add Transaction Dialog */}
         <Dialog open={showTransaction} onOpenChange={setShowTransaction}>
-          <DialogContent className="max-w-md">
+          <DialogContent className={`max-w-md ${appSettings.numberPadEnabled === 'true' ? 'max-w-2xl' : 'max-w-md'}`}>
             <DialogHeader>
               <DialogTitle>إضافة حركة جديدة</DialogTitle>
               <DialogDescription>
                 أدخل بيانات الحركة المالية
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="type">نوع الحركة</Label>
-                <Select value={transactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setTransactionForm({ ...transactionForm, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="deposit">إيداع</SelectItem>
-                    <SelectItem value="withdrawal">سحب</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className={`space-y-4 ${appSettings.numberPadEnabled === 'true' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="type">نوع الحركة</Label>
+                  <Select value={transactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setTransactionForm({ ...transactionForm, type: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="deposit">إيداع</SelectItem>
+                      <SelectItem value="withdrawal">سحب</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="amount">المبلغ</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  inputMode="numeric"
-                  step="0.01"
-                  value={transactionForm.amount}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9.]/g, '')
-                    setTransactionForm({ ...transactionForm, amount: value })
-                  }}
-                  placeholder="0.00"
-                />
-                {transactionForm.amount && (
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {(() => {
-                      const amount = parseFloat(transactionForm.amount)
-                      if (!isNaN(amount) && amount > 0) {
-                        const fee = calculateTransactionFee(amount)
-                        const total = amount + fee
-                        return (
-                          <div>
-                            <p>الرسوم: {fee.toFixed(2)} جنيه</p>
-                            <p>الإجمالي: {total.toFixed(2)} جنيه</p>
-                          </div>
-                        )
+                <div>
+                  <Label htmlFor="amount">المبلغ</Label>
+                  <Input
+                    id="amount"
+                    type="text"
+                    inputMode="none"
+                    readOnly={appSettings.numberPadEnabled === 'true'}
+                    step="0.01"
+                    value={transactionForm.amount}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '')
+                      setTransactionForm({ ...transactionForm, amount: value })
+                    }}
+                    placeholder="0.00"
+                    onClick={(e) => {
+                      if (appSettings.numberPadEnabled === 'true') {
+                        e.preventDefault()
+                        e.currentTarget.blur()
                       }
-                      return null
-                    })()}
-                  </div>
-                )}
+                    }}
+                    onFocus={(e) => {
+                      if (appSettings.numberPadEnabled === 'true') {
+                        e.preventDefault()
+                        e.currentTarget.blur()
+                      }
+                    }}
+                    className={appSettings.numberPadEnabled === 'true' ? 'cursor-pointer' : ''}
+                  />
+                  {appSettings.numberPadEnabled === 'true' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      استخدم لوحة الأرقام المدمجة لإدخال المبلغ
+                    </p>
+                  )}
+                  {transactionForm.amount && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {(() => {
+                        const amount = parseFloat(transactionForm.amount)
+                        if (!isNaN(amount) && amount > 0) {
+                          const fee = calculateTransactionFee(amount)
+                          const total = amount + fee
+                          return (
+                            <div>
+                              <p>الرسوم: {fee.toFixed(2)} جنيه</p>
+                              <p>الإجمالي: {total.toFixed(2)} جنيه</p>
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="description">الوصف (اختياري)</Label>
+                  <Textarea
+                    id="description"
+                    value={transactionForm.description}
+                    onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
+                    placeholder="أدخل وصف الحركة"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={handleAddTransaction} disabled={transactionProcessing} className="flex-1">
+                    {transactionProcessing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                    إضافة الحركة
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowTransaction(false)} className="flex-1">
+                    إلغاء
+                  </Button>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="description">الوصف (اختياري)</Label>
-                <Textarea
-                  id="description"
-                  value={transactionForm.description}
-                  onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
-                  placeholder="أدخل وصف الحركة"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleAddTransaction} disabled={transactionProcessing} className="flex-1">
-                  {transactionProcessing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
-                  إضافة الحركة
-                </Button>
-                <Button variant="outline" onClick={() => setShowTransaction(false)} className="flex-1">
-                  إلغاء
-                </Button>
-              </div>
+              {/* Number Pad */}
+              {appSettings.numberPadEnabled === 'true' && (
+                <div className="lg:mt-0 mt-6">
+                  <NumberPad
+                    value={transactionForm.amount}
+                    onChange={(value) => setTransactionForm({ ...transactionForm, amount: value })}
+                    onClear={() => setTransactionForm({ ...transactionForm, amount: '' })}
+                    onSubmit={handleAddTransaction}
+                    placeholder="0.00"
+                    disabled={transactionProcessing}
+                    maxLength={10}
+                    onInputClick={() => {
+                      // Focus on input field briefly to trigger any focus effects
+                      const amountInput = document.getElementById('amount') as HTMLInputElement
+                      if (amountInput) {
+                        amountInput.focus()
+                        setTimeout(() => amountInput.blur(), 100)
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Edit Transaction Dialog */}
         <Dialog open={showEditTransaction} onOpenChange={setShowEditTransaction}>
-          <DialogContent className="max-w-md">
+          <DialogContent className={`max-w-md ${appSettings.numberPadEnabled === 'true' ? 'max-w-2xl' : 'max-w-md'}`}>
             <DialogHeader>
               <DialogTitle>تعديل الحركة</DialogTitle>
               <DialogDescription>
                 عدل بيانات الحركة المالية
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className={`space-y-4 ${appSettings.numberPadEnabled === 'true' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
               <div>
                 <Label htmlFor="edit-type">نوع الحركة</Label>
                 <Select value={editTransactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setEditTransactionForm({ ...editTransactionForm, type: value })}>
@@ -732,8 +826,9 @@ export default function WalletDetail() {
                 <Label htmlFor="edit-amount">المبلغ</Label>
                 <Input
                   id="edit-amount"
-                  type="number"
-                  inputMode="numeric"
+                  type="text"
+                  inputMode="none"
+                  readOnly={appSettings.numberPadEnabled === 'true'}
                   step="0.01"
                   value={editTransactionForm.amount}
                   onChange={(e) => {
@@ -741,7 +836,25 @@ export default function WalletDetail() {
                     setEditTransactionForm({ ...editTransactionForm, amount: value })
                   }}
                   placeholder="0.00"
+                  onClick={(e) => {
+                    if (appSettings.numberPadEnabled === 'true') {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  onFocus={(e) => {
+                    if (appSettings.numberPadEnabled === 'true') {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  className={appSettings.numberPadEnabled === 'true' ? 'cursor-pointer' : ''}
                 />
+                {appSettings.numberPadEnabled === 'true' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    استخدم لوحة الأرقام المدمجة لإدخال المبلغ
+                  </p>
+                )}
               </div>
 
               <div>
@@ -765,8 +878,29 @@ export default function WalletDetail() {
                 </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+
+            {/* Number Pad */}
+            {appSettings.numberPadEnabled === 'true' && (
+              <div className="lg:mt-0 mt-6">
+                <NumberPad
+                  value={editTransactionForm.amount}
+                  onChange={(value) => setEditTransactionForm({ ...editTransactionForm, amount: value })}
+                  onClear={() => setEditTransactionForm({ ...editTransactionForm, amount: '' })}
+                  onSubmit={handleUpdateTransaction}
+                  placeholder="0.00"
+                  disabled={transactionProcessing}
+                  maxLength={10}
+                  onInputClick={() => {
+                    // Focus on input field briefly to trigger any focus effects
+                    const amountInput = document.getElementById('edit-amount') as HTMLInputElement
+                    if (amountInput) {
+                      amountInput.focus()
+                      setTimeout(() => amountInput.blur(), 100)
+                    }
+                  }}
+                />
+              </div>
+            )}
       </div>
     </div>
   )
