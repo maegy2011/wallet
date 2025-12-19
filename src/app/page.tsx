@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home } from 'lucide-react'
+import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface Wallet {
@@ -62,6 +62,7 @@ export default function WalletManagement() {
   const [monthlyLimit, setMonthlyLimit] = useState(0)
   const [alertMessage, setAlertMessage] = useState('')
   const [showWalletDialog, setShowWalletDialog] = useState(false)
+  const [lastUsedWalletId, setLastUsedWalletId] = useState<string>('')
 
   // Form states
   const [walletForm, setWalletForm] = useState({
@@ -220,6 +221,11 @@ export default function WalletManagement() {
     }
   }
 
+  // Calculate total fees across all wallets
+  const totalFeesAcrossAllWallets = useMemo(() => {
+    return wallets.reduce((total, wallet) => total + (wallet.totalFeesEarned || 0), 0)
+  }, [wallets])
+
   const stats = useMemo(() => calculateMonthlyStats(), [transactions])
 
   // Update monthly limit state when stats change
@@ -250,6 +256,14 @@ export default function WalletManagement() {
           ])
           setWallets(walletsData)
           setTransactions(transactionsData)
+          
+          // Set last used wallet (most recent transaction)
+          if (transactionsData.length > 0) {
+            const latestTransaction = transactionsData.reduce((latest: any, current: any) => 
+              new Date(current.date) > new Date(latest.date) ? current : latest
+            )
+            setLastUsedWalletId(latestTransaction.walletId)
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -270,6 +284,13 @@ export default function WalletManagement() {
       return () => clearTimeout(timer)
     }
   }, [alertMessage])
+
+  // Auto-select last used wallet when opening transaction dialog
+  useEffect(() => {
+    if (showTransaction && lastUsedWalletId && !transactionForm.walletId) {
+      setTransactionForm(prev => ({ ...prev, walletId: lastUsedWalletId }))
+    }
+  }, [showTransaction, lastUsedWalletId])
 
   const handleEditWallet = (wallet: Wallet) => {
     setEditingWallet(wallet)
@@ -383,8 +404,8 @@ export default function WalletManagement() {
   }
 
   const handleAddTransaction = async () => {
-    if (!transactionForm.walletId || !transactionForm.amount || !transactionForm.description) {
-      setAlertMessage('يرجى ملء جميع الحقول المطلوبة')
+    if (!transactionForm.walletId || !transactionForm.amount) {
+      setAlertMessage('يرجى ملء الحقول المطلوبة')
       return
     }
 
@@ -409,7 +430,8 @@ export default function WalletManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...transactionForm,
-          amount
+          amount,
+          description: transactionForm.description || 'حركة مالية'
         })
       })
 
@@ -429,12 +451,124 @@ export default function WalletManagement() {
           ))
         }
         
+        // Update last used wallet
+        setLastUsedWalletId(transactionForm.walletId)
+        
         setTransactionForm({ walletId: '', type: 'deposit', amount: '', description: '' })
         setShowTransaction(false)
         setAlertMessage('تمت إضافة الحركة بنجاح')
       }
     } catch (error) {
       setAlertMessage('حدث خطأ أثناء إضافة الحركة')
+    } finally {
+      setTransactionProcessing(false)
+    }
+  }
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        const deletedTransaction = transactions.find(t => t.id === transactionId)
+        if (deletedTransaction) {
+          // Update wallet balance
+          const wallet = wallets.find(w => w.id === deletedTransaction.walletId)
+          if (wallet) {
+            const newBalance = wallet.balance - (deletedTransaction.type === 'deposit' ? deletedTransaction.amount : -deletedTransaction.amount)
+            const newFees = wallet.totalFeesEarned - deletedTransaction.feeAmount
+            setWallets(wallets.map(w => 
+              w.id === deletedTransaction.walletId 
+                ? { ...w, balance: newBalance, totalFeesEarned: newFees }
+                : w
+            ))
+          }
+        }
+        
+        setTransactions(transactions.filter(t => t.id !== transactionId))
+        setAlertMessage('تم حذف الحركة بنجاح')
+      }
+    } catch (error) {
+      setAlertMessage('حدث خطأ أثناء حذف الحركة')
+    }
+  }
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction)
+    setEditTransactionForm({
+      walletId: transaction.walletId,
+      type: transaction.type,
+      amount: transaction.amount.toString(),
+      description: transaction.description
+    })
+    setShowEditTransaction(true)
+  }
+
+  const handleUpdateTransaction = async () => {
+    if (!editTransactionForm.walletId || !editTransactionForm.amount) {
+      setAlertMessage('يرجى ملء الحقول المطلوبة')
+      return
+    }
+
+    const amount = parseFloat(editTransactionForm.amount)
+    if (isNaN(amount) || amount <= 0) {
+      setAlertMessage('يرجى إدخال مبلغ صحيح')
+      return
+    }
+
+    setTransactionProcessing(true)
+    try {
+      const response = await fetch(`/api/transactions/${editingTransaction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editTransactionForm,
+          amount,
+          description: editTransactionForm.description || 'حركة مالية'
+        })
+      })
+
+      if (response.ok) {
+        const updatedTransaction = await response.json()
+        
+        // Recalculate wallet balances for both old and new wallets
+        const oldWallet = wallets.find(w => w.id === editingTransaction.walletId)
+        const newWallet = wallets.find(w => w.id === editTransactionForm.walletId)
+        
+        if (oldWallet) {
+          // Remove old transaction impact
+          const oldBalance = oldWallet.balance - (editingTransaction.type === 'deposit' ? editingTransaction.amount : -editingTransaction.amount)
+          const oldFees = oldWallet.totalFeesEarned - editingTransaction.feeAmount
+          
+          setWallets(wallets.map(w => 
+            w.id === editingTransaction.walletId 
+              ? { ...w, balance: oldBalance, totalFeesEarned: oldFees }
+              : w
+          ))
+        }
+        
+        if (newWallet) {
+          // Add new transaction impact
+          const newBalance = newWallet.balance + (editTransactionForm.type === 'deposit' ? amount : -amount)
+          const newFees = newWallet.totalFeesEarned + updatedTransaction.feeAmount
+          
+          setWallets(wallets.map(w => 
+            w.id === editTransactionForm.walletId 
+              ? { ...w, balance: newBalance, totalFeesEarned: newFees }
+              : w
+          ))
+        }
+        
+        setTransactions(transactions.map(t => t.id === editingTransaction.id ? updatedTransaction : t))
+        setEditTransactionForm({ walletId: '', type: 'deposit', amount: '', description: '' })
+        setShowEditTransaction(false)
+        setEditingTransaction(null)
+        setAlertMessage('تم تحديث الحركة بنجاح')
+      }
+    } catch (error) {
+      setAlertMessage('حدث خطأ أثناء تحديث الحركة')
     } finally {
       setTransactionProcessing(false)
     }
@@ -451,6 +585,10 @@ export default function WalletManagement() {
   const handleAddWalletFromDialog = () => {
     setShowWalletDialog(false)
     setShowAddWallet(true)
+  }
+
+  const handleViewWallet = (walletId: string) => {
+    router.push(`/wallet/${walletId}`)
   }
 
   if (isLoading) {
@@ -504,18 +642,7 @@ export default function WalletManagement() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي المحافظ</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeWallets.length}</div>
-              <p className="text-xs text-muted-foreground">محافظ نشطة</p>
-            </CardContent>
-          </Card>
-          
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">إيداع هذا الشهر</CardTitle>
@@ -540,12 +667,12 @@ export default function WalletManagement() {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي المعاملات</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">إجمالي الرسوم</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.transactionCount}</div>
-              <p className="text-xs text-muted-foreground">{stats.monthName} {stats.year}</p>
+              <div className="text-2xl font-bold">{totalFeesAcrossAllWallets.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
         </div>
@@ -576,39 +703,48 @@ export default function WalletManagement() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {activeWallets.map((wallet) => (
-                      <div key={wallet.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="text-2xl">{wallet.logo || '🏦'}</div>
-                            <div>
-                              <h3 className="font-semibold">{wallet.name}</h3>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Smartphone className="h-3 w-3" />
-                                {wallet.mobileNumber}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {getFeeDescription(wallet)}
-                              </p>
+                  <ScrollArea className="h-96">
+                    <div className="space-y-4">
+                      {activeWallets.map((wallet) => (
+                        <div key={wallet.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="text-2xl">{wallet.logo || '🏦'}</div>
+                              <div>
+                                <h3 className="font-semibold">{wallet.name}</h3>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Smartphone className="h-3 w-3" />
+                                  {wallet.mobileNumber}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {getFeeDescription(wallet)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-left">
-                            <p className="font-semibold">{wallet.balance.toLocaleString()} جنيه</p>
-                            <div className="flex gap-1 mt-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditWallet(wallet)}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
+                            <div className="text-left">
+                              <p className="font-semibold">{wallet.balance.toLocaleString()} جنيه</p>
+                              <div className="flex gap-1 mt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewWallet(wallet.id)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditWallet(wallet)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 )}
               </CardContent>
             </Card>
@@ -648,28 +784,14 @@ export default function WalletManagement() {
               </CardContent>
             </Card>
 
-            {/* Monthly Limit */}
+            {/* Monthly Transactions */}
             <Card>
               <CardHeader>
-                <CardTitle>الحد الشهري</CardTitle>
+                <CardTitle>إجمالي المعاملات</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>المستخدم</span>
-                    <span>{monthlyLimit.toLocaleString()} جنيه</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>المتبقي</span>
-                    <span>{Math.max(0, 200000 - monthlyLimit).toLocaleString()} جنيه</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (monthlyLimit / 200000) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                <div className="text-2xl font-bold">{stats.transactionCount}</div>
+                <p className="text-xs text-muted-foreground">{stats.monthName} {stats.year}</p>
               </CardContent>
             </Card>
           </div>
@@ -699,8 +821,14 @@ export default function WalletManagement() {
                 <Label htmlFor="mobileNumber">رقم الموبايل</Label>
                 <Input
                   id="mobileNumber"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={walletForm.mobileNumber}
-                  onChange={(e) => setWalletForm({ ...walletForm, mobileNumber: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    setWalletForm({ ...walletForm, mobileNumber: value })
+                  }}
                   placeholder="01xxxxxxxxx"
                 />
               </div>
@@ -816,7 +944,10 @@ export default function WalletManagement() {
                       <SelectItem key={wallet.id} value={wallet.id}>
                         <div className="flex items-center gap-2">
                           <span>{wallet.logo || '🏦'}</span>
-                          <span>{wallet.name}</span>
+                          <div>
+                            <span>{wallet.name}</span>
+                            <span className="text-xs text-muted-foreground mr-2">{wallet.mobileNumber}</span>
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
@@ -842,9 +973,13 @@ export default function WalletManagement() {
                 <Input
                   id="amount"
                   type="number"
+                  inputMode="numeric"
                   step="0.01"
                   value={transactionForm.amount}
-                  onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '')
+                    setTransactionForm({ ...transactionForm, amount: value })
+                  }}
                   placeholder="0.00"
                 />
                 {transactionForm.walletId && transactionForm.amount && (
@@ -867,7 +1002,7 @@ export default function WalletManagement() {
               </div>
 
               <div>
-                <Label htmlFor="description">الوصف</Label>
+                <Label htmlFor="description">الوصف (اختياري)</Label>
                 <Textarea
                   id="description"
                   value={transactionForm.description}
@@ -883,6 +1018,91 @@ export default function WalletManagement() {
                   إضافة الحركة
                 </Button>
                 <Button variant="outline" onClick={() => setShowTransaction(false)} className="flex-1">
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Transaction Dialog */}
+        <Dialog open={showEditTransaction} onOpenChange={setShowEditTransaction}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>تعديل الحركة</DialogTitle>
+              <DialogDescription>
+                عدل بيانات الحركة المالية
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-walletId">المحفظة</Label>
+                <Select value={editTransactionForm.walletId} onValueChange={(value) => setEditTransactionForm({ ...editTransactionForm, walletId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المحفظة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeWallets.map((wallet) => (
+                      <SelectItem key={wallet.id} value={wallet.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{wallet.logo || '🏦'}</span>
+                          <div>
+                            <span>{wallet.name}</span>
+                            <span className="text-xs text-muted-foreground mr-2">{wallet.mobileNumber}</span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-type">نوع الحركة</Label>
+                <Select value={editTransactionForm.type} onValueChange={(value: 'deposit' | 'withdrawal') => setEditTransactionForm({ ...editTransactionForm, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deposit">إيداع</SelectItem>
+                    <SelectItem value="withdrawal">سحب</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-amount">المبلغ</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  inputMode="numeric"
+                  step="0.01"
+                  value={editTransactionForm.amount}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '')
+                    setEditTransactionForm({ ...editTransactionForm, amount: value })
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-description">الوصف (اختياري)</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editTransactionForm.description}
+                  onChange={(e) => setEditTransactionForm({ ...editTransactionForm, description: e.target.value })}
+                  placeholder="أدخل وصف الحركة"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateTransaction} disabled={transactionProcessing} className="flex-1">
+                  {transactionProcessing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                  تحديث الحركة
+                </Button>
+                <Button variant="outline" onClick={() => setShowEditTransaction(false)} className="flex-1">
                   إلغاء
                 </Button>
               </div>
@@ -913,8 +1133,14 @@ export default function WalletManagement() {
                 <Label htmlFor="edit-mobileNumber">رقم الموبايل</Label>
                 <Input
                   id="edit-mobileNumber"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={editForm.mobileNumber}
-                  onChange={(e) => setEditForm({ ...editForm, mobileNumber: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    setEditForm({ ...editForm, mobileNumber: value })
+                  }}
                 />
               </div>
 

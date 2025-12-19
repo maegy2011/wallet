@@ -191,9 +191,15 @@ export default function SettingsPage() {
         throw new Error('ملف غير صالح')
       }
 
+      // Clear existing data first
+      await fetch('/api/settings/clear-data', {
+        method: 'DELETE'
+      })
+
       // Import wallets
+      const walletIdMap = new Map()
       for (const wallet of importData.wallets) {
-        await fetch('/api/wallets', {
+        const response = await fetch('/api/wallets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -206,6 +212,29 @@ export default function SettingsPage() {
             maxFeeAmount: wallet.maxFeeAmount
           })
         })
+        
+        if (response.ok) {
+          const newWallet = await response.json()
+          walletIdMap.set(wallet.id, newWallet.id)
+        }
+      }
+
+      // Import transactions with updated wallet IDs
+      for (const transaction of importData.transactions) {
+        const newWalletId = walletIdMap.get(transaction.walletId)
+        if (newWalletId) {
+          await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletId: newWalletId,
+              type: transaction.type,
+              amount: transaction.amount,
+              description: transaction.description,
+              date: transaction.date // Keep original date
+            })
+          })
+        }
       }
 
       // Reload data
@@ -223,7 +252,7 @@ export default function SettingsPage() {
         setTransactions(transactionsData)
       }
 
-      setAlertMessage('تم استيراد البيانات بنجاح')
+      setAlertMessage('تم استيراد جميع البيانات بنجاح')
     } catch (error) {
       setAlertMessage('حدث خطأ أثناء استيراد البيانات')
     } finally {
@@ -455,7 +484,7 @@ export default function SettingsPage() {
                   <div>
                     <h3 className="font-medium mb-4">استيراد البيانات</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      استيراد بيانات من ملف نسخ احتياطي سابق
+                      استيراد جميع البيانات من ملف نسخ احتياطي سابق (سيتم حذف البيانات الحالية)
                     </p>
                     <div className="space-y-2">
                       <Input
