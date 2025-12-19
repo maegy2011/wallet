@@ -41,6 +41,7 @@ model Wallet {
   expenses        Expense[]
   transfersFrom   Transfer[] @relation("TransferFrom")
   transfersTo     Transfer[] @relation("TransferTo")
+  reports         Report[]
 }
 
 model Transaction {
@@ -118,4 +119,15 @@ model Settings {
   value           String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Report {
+  id              String   @id @default(cuid())
+  walletId        String
+  type            String   // 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'
+  period          String   // JSON string containing period details (date, quarter, year, etc.)
+  data            String   // JSON string containing the report data
+  generatedAt     DateTime @default(now())
+  
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
 }

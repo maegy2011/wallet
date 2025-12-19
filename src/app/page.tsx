@@ -615,12 +615,12 @@ export default function WalletManagement() {
     const dailyStats = calculateWalletDailyStats(transactionForm.walletId)
     
     if (walletStats.monthlyLimit + amount > wallet.monthlyLimit) {
-      setAlertMessage(`تجاوز الحد الشهري المسموح به (${wallet.monthlyLimit.toLocaleString()} جنيه) لهذه المحفظة`)
+      setAlertMessage(`تجاوز الحد الشهري المسموح به (${wallet.monthlyLimit?.toLocaleString() || 0} جنيه) لهذه المحفظة`)
       return
     }
 
     if (dailyStats.dailyLimit + amount > wallet.dailyLimit) {
-      setAlertMessage(`تجاوز الحد اليومي المسموح به (${wallet.dailyLimit.toLocaleString()} جنيه) لهذه المحفظة`)
+      setAlertMessage(`تجاوز الحد اليومي المسموح به (${wallet.dailyLimit?.toLocaleString() || 0} جنيه) لهذه المحفظة`)
       return
     }
 
@@ -877,7 +877,7 @@ export default function WalletManagement() {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalDeposits.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{stats.totalDeposits?.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
@@ -888,7 +888,7 @@ export default function WalletManagement() {
               <TrendingDown className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalWithdrawals.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{stats.totalWithdrawals?.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
@@ -910,7 +910,7 @@ export default function WalletManagement() {
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{netProfitData.netProfit.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{netProfitData.netProfit?.toLocaleString() || 0}</div>
               <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
@@ -925,7 +925,7 @@ export default function WalletManagement() {
                 <div className="font-medium mb-2">تنبيهات انخفاض الرصيد:</div>
                 {balanceAlerts.map((alert, index) => (
                   <div key={index} className="text-sm">
-                    • محفظة <strong>{alert.walletName}</strong>: الرصيد الحالي {alert.currentBalance.toLocaleString()} جنيه (أقل من الحد الأدنى {alert.minBalanceAlert.toLocaleString()} جنيه)
+                    • محفظة <strong>{alert.walletName}</strong>: الرصيد الحالي {alert.currentBalance?.toLocaleString() || 0} جنيه (أقل من الحد الأدنى {alert.minBalance?.toLocaleString() || 0} جنيه)
                   </div>
                 ))}
               </AlertDescription>
@@ -978,7 +978,7 @@ export default function WalletManagement() {
                               </div>
                             </div>
                             <div className="text-left">
-                              <p className="font-semibold">{wallet.balance.toLocaleString()} جنيه</p>
+                              <p className="font-semibold">{wallet.balance?.toLocaleString() || 0} جنيه</p>
                               <div className="flex gap-1 mt-2">
                                 <Button
                                   variant="ghost"
