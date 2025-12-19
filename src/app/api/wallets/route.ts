@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function GET() {
   try {
@@ -26,8 +27,21 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Name and mobile number are required' }, { status: 400 })
     }
 
+    // Check if mobile number already exists for non-archived wallets
+    const existingWallet = await db.wallet.findFirst({
+      where: {
+        mobileNumber,
+        isArchived: false
+      }
+    })
+
+    if (existingWallet) {
+      return Response.json({ error: 'Mobile number already exists' }, { status: 400 })
+    }
+
     const wallet = await db.wallet.create({
       data: {
+        uuid: uuidv4(),
         name,
         mobileNumber,
         logo: logo || null,

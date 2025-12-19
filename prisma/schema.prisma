@@ -15,6 +15,7 @@ datasource db {
 
 model Wallet {
   id              String   @id @default(cuid())
+  uuid            String   @unique @default(uuid())
   name            String
   mobileNumber    String   @unique
   logo            String?
