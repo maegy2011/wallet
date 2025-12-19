@@ -32,6 +32,7 @@ interface Wallet {
   feePercentage: number
   feePerThousand: number
   maxFeeAmount: number
+  minFeeAmount: number
   totalFeesEarned: number
   isArchived: boolean
   archivedAt?: string
@@ -96,7 +97,8 @@ export default function WalletManagement() {
     feeType: 'percentage',
     feePercentage: '',
     feePerThousand: '',
-    maxFeeAmount: ''
+    maxFeeAmount: '',
+    minFeeAmount: ''
   })
 
   const [editForm, setEditForm] = useState({
@@ -106,7 +108,8 @@ export default function WalletManagement() {
     feeType: 'percentage',
     feePercentage: '',
     feePerThousand: '',
-    maxFeeAmount: ''
+    maxFeeAmount: '',
+    minFeeAmount: ''
   })
 
   const [transactionForm, setTransactionForm] = useState({
@@ -157,21 +160,51 @@ export default function WalletManagement() {
     }
     
     const maxFeeAmount = wallet.maxFeeAmount || 0
-    return maxFeeAmount > 0 ? Math.min(calculatedFee, maxFeeAmount) : calculatedFee
+    const minFeeAmount = wallet.minFeeAmount || 0
+    let feeAmount = calculatedFee
+    
+    // Apply maximum fee limit if set
+    if (maxFeeAmount > 0 && feeAmount > maxFeeAmount) {
+      feeAmount = maxFeeAmount
+    }
+    
+    // Apply minimum fee if set and calculated fee is less than minimum
+    if (minFeeAmount > 0 && feeAmount < minFeeAmount) {
+      feeAmount = minFeeAmount
+    }
+    
+    return feeAmount
   }
 
   // Get fee description for display
   const getFeeDescription = (wallet: any): string => {
+    let description = ''
     switch (wallet.feeType) {
       case 'percentage':
-        return `${wallet.feePercentage || 0}% من المبلغ`
+        description = `${wallet.feePercentage || 0}% من المبلغ`
+        break
       case 'perThousand':
-        return `${wallet.feePerThousand || 0} جنيه لكل 1000 جنيه`
+        description = `${wallet.feePerThousand || 0} جنيه لكل 1000 جنيه`
+        break
       case 'fixed':
-        return `${wallet.feePercentage || 0} جنيه ثابت`
+        description = `${wallet.feePercentage || 0} جنيه ثابت`
+        break
       default:
-        return 'لا توجد رسوم'
+        description = 'لا توجد رسوم'
     }
+    
+    const maxFee = wallet.maxFeeAmount || 0
+    const minFee = wallet.minFeeAmount || 0
+    
+    if (maxFee > 0 && minFee > 0) {
+      description += ` (حد أدنى ${minFee} ج.م، حد أقصى ${maxFee} ج.م)`
+    } else if (maxFee > 0) {
+      description += ` (حد أقصى ${maxFee} ج.م)`
+    } else if (minFee > 0) {
+      description += ` (حد أدنى ${minFee} ج.م)`
+    }
+    
+    return description
   }
 
   // Calculate monthly statistics for each wallet
@@ -360,7 +393,8 @@ export default function WalletManagement() {
       feeType: wallet.feeType || 'percentage',
       feePercentage: (wallet.feePercentage || 0).toString(),
       feePerThousand: (wallet.feePerThousand || 0).toString(),
-      maxFeeAmount: (wallet.maxFeeAmount || 0).toString()
+      maxFeeAmount: (wallet.maxFeeAmount || 0).toString(),
+      minFeeAmount: (wallet.minFeeAmount || 0).toString()
     })
     setShowEditWallet(true)
   }
@@ -374,8 +408,9 @@ export default function WalletManagement() {
     const feePercentage = parseFloat(editForm.feePercentage) || 0
     const feePerThousand = parseFloat(editForm.feePerThousand) || 0
     const maxFeeAmount = parseFloat(editForm.maxFeeAmount) || 0
+    const minFeeAmount = parseFloat(editForm.minFeeAmount) || 0
 
-    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0) {
+    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0) {
       setAlertMessage('الرسوم يجب أن تكون أرقام موجبة')
       return
     }
@@ -392,14 +427,15 @@ export default function WalletManagement() {
           feeType: editForm.feeType,
           feePercentage,
           feePerThousand,
-          maxFeeAmount
+          maxFeeAmount,
+          minFeeAmount
         })
       })
 
       if (response.ok) {
         const updatedWallet = await response.json()
         setWallets(wallets.map(w => w.id === editingWallet.id ? updatedWallet : w))
-        setEditForm({ name: '', mobileNumber: '', logo: '', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '' })
+        setEditForm({ name: '', mobileNumber: '', logo: '', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '', minFeeAmount: '' })
         setShowEditWallet(false)
         setEditingWallet(null)
         setAlertMessage('تم تحديث المحفظة بنجاح')
@@ -426,8 +462,9 @@ export default function WalletManagement() {
     const feePercentage = parseFloat(walletForm.feePercentage) || 0
     const feePerThousand = parseFloat(walletForm.feePerThousand) || 0
     const maxFeeAmount = parseFloat(walletForm.maxFeeAmount) || 0
+    const minFeeAmount = parseFloat(walletForm.minFeeAmount) || 0
 
-    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0) {
+    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0) {
       setAlertMessage('الرسوم يجب أن تكون أرقام موجبة')
       return
     }
@@ -444,14 +481,15 @@ export default function WalletManagement() {
           feeType: walletForm.feeType,
           feePercentage,
           feePerThousand,
-          maxFeeAmount
+          maxFeeAmount,
+          minFeeAmount
         })
       })
 
       if (response.ok) {
         const newWallet = await response.json()
         setWallets([...wallets, newWallet])
-        setWalletForm({ name: '', mobileNumber: '', logo: '', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '' })
+        setWalletForm({ name: '', mobileNumber: '', logo: '', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '', minFeeAmount: '' })
         setShowAddWallet(false)
         setAlertMessage('تمت إضافة المحفظة بنجاح')
       }
@@ -680,6 +718,24 @@ export default function WalletManagement() {
               >
                 <PiggyBank className="h-4 w-4" />
                 <span className="hidden sm:inline">خزينة الكاش</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/expenses')}
+                className="flex items-center gap-2"
+              >
+                <TrendingDown className="h-4 w-4" />
+                <span className="hidden sm:inline">المصروفات</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/summary')}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">ملخص الأعمال</span>
               </Button>
               <Button
                 variant="outline"
@@ -999,6 +1055,18 @@ export default function WalletManagement() {
                   value={walletForm.maxFeeAmount}
                   onChange={(e) => setWalletForm({ ...walletForm, maxFeeAmount: e.target.value })}
                   placeholder="20"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="minFeeAmount">أدنى رسوم (اختياري)</Label>
+                <Input
+                  id="minFeeAmount"
+                  type="number"
+                  step="0.5"
+                  value={walletForm.minFeeAmount}
+                  onChange={(e) => setWalletForm({ ...walletForm, minFeeAmount: e.target.value })}
+                  placeholder="1"
                 />
               </div>
 
@@ -1393,6 +1461,17 @@ export default function WalletManagement() {
                   step="0.5"
                   value={editForm.maxFeeAmount}
                   onChange={(e) => setEditForm({ ...editForm, maxFeeAmount: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-minFeeAmount">أدنى رسوم (اختياري)</Label>
+                <Input
+                  id="edit-minFeeAmount"
+                  type="number"
+                  step="0.5"
+                  value={editForm.minFeeAmount}
+                  onChange={(e) => setEditForm({ ...editForm, minFeeAmount: e.target.value })}
                 />
               </div>
 

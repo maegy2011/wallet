@@ -68,11 +68,17 @@ export async function POST(request: Request) {
     }
     
     const maxFeeAmount = wallet.maxFeeAmount || 0
+    const minFeeAmount = wallet.minFeeAmount || 0
     let feeAmount = calculatedFee
     
     // Apply maximum fee limit if set
     if (maxFeeAmount > 0 && feeAmount > maxFeeAmount) {
       feeAmount = maxFeeAmount
+    }
+    
+    // Apply minimum fee if set and calculated fee is less than minimum
+    if (minFeeAmount > 0 && feeAmount < minFeeAmount) {
+      feeAmount = minFeeAmount
     }
 
     // Get current month and year

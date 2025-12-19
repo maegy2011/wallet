@@ -36,7 +36,8 @@ export async function PUT(
       feeType,
       feePercentage,
       feePerThousand,
-      maxFeeAmount
+      maxFeeAmount,
+      minFeeAmount
     } = body
 
     // Check if wallet exists
@@ -73,6 +74,7 @@ export async function PUT(
         feePercentage: feePercentage || 0,
         feePerThousand: feePerThousand || 0,
         maxFeeAmount: maxFeeAmount || 0,
+        minFeeAmount: minFeeAmount || 0,
         updatedAt: new Date()
       }
     })

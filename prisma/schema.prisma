@@ -28,6 +28,7 @@ model Wallet {
   feePercentage   Float    @default(0) // Percentage fee (e.g., 2.5 for 2.5%)
   feePerThousand  Float    @default(0) // Fee amount per 1000 EGP (e.g., 5 for 5 EGP per 1000)
   maxFeeAmount    Float    @default(0) // Maximum fee amount in Egyptian Pounds
+  minFeeAmount    Float    @default(0) // Minimum fee amount in Egyptian Pounds
   totalFeesEarned Float    @default(0) // Total fees earned by merchant
   isArchived      Boolean  @default(false) // Soft delete flag
   archivedAt      DateTime? // Archive timestamp
@@ -35,6 +36,7 @@ model Wallet {
   updatedAt       DateTime @updatedAt
   
   transactions    Transaction[]
+  expenses        Expense[]
   transfersFrom   Transfer[] @relation("TransferFrom")
   transfersTo     Transfer[] @relation("TransferTo")
 }
@@ -52,6 +54,18 @@ model Transaction {
   isFullyCovered      Boolean @default(true) // true = fully covered by cash treasury, false = partially covered
   
   wallet              Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id              String   @id @default(cuid())
+  walletId        String
+  category        String   // 'rent', 'bills', 'food', 'personal', 'other'
+  amount          Float
+  description     String
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
 }
 
 model CashTreasury {
