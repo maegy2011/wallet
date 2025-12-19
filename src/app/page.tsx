@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,8 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign, ArrowUpRight, ArrowDownRight, PiggyBank } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Image, Users, BarChart3, Edit, Archive, Trash2, RefreshCw, Loader2, Settings, Download, Upload, Smartphone, Home, Eye, DollarSign, ArrowUpRight, ArrowDownRight, PiggyBank, LogOut, Building, UserPlus, Store } from 'lucide-react'
 import NumberPad from '@/components/ui/number-pad'
 
 interface Wallet {
@@ -71,7 +71,34 @@ interface CashTreasuryTransaction {
   createdAt: string
 }
 
+interface User {
+  id: string
+  username: string
+  email?: string
+  phone: string
+  nationalId: string
+  isActive: boolean
+  isEmailVerified: boolean
+  isPhoneVerified: boolean
+  lastLoginAt?: string
+}
+
+interface BusinessAccount {
+  id: string
+  name: string
+  description?: string
+  phone: string
+  email?: string
+  isActive: boolean
+  createdAt: string
+}
+
 export default function WalletManagement() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [businessAccounts, setBusinessAccounts] = useState<BusinessAccount[]>([])
+  const [userRoles, setUserRoles] = useState<any[]>([])
+  const [authLoading, setAuthLoading] = useState(true)
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cashTreasury, setCashTreasury] = useState<CashTreasury | null>(null)
@@ -139,82 +166,96 @@ export default function WalletManagement() {
 
   const router = useRouter()
 
-  // Predefined wallet logos
-  const predefinedLogos = [
-    '🏦', '💳', '💰', '💵', '💴', '💶', '💷', '🪙', '🤑', '💸',
-    '📱', '🏪', '🏛️', '🏧', '💼', '🏭', '🏢', '🏣', '🏤', '🏥'
-  ]
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [walletsResponse, transactionsResponse, settingsResponse, cashTreasuryResponse, cashTreasuryTransactionsResponse] = await Promise.all([
+          fetch('/api/wallets'),
+          fetch('/api/transactions'),
+          fetch('/api/settings'),
+          fetch('/api/cash-treasury'),
+          fetch('/api/cash-treasury/transactions')
+        ])
+        
+        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok && cashTreasuryResponse.ok && cashTreasuryTransactionsResponse.ok) {
+          const [walletsData, transactionsData, settingsData, cashTreasuryData, cashTreasuryTransactionsData] = await Promise.all([
+            walletsResponse.json(),
+            transactionsResponse.json(),
+            settingsResponse.json(),
+            cashTreasuryResponse.json(),
+            cashTreasuryTransactionsResponse.json()
+          ])
+          setWallets(walletsData)
+          setTransactions(transactionsData)
+          setCashTreasury(cashTreasuryData)
+          setCashTreasuryTransactions(cashTreasuryTransactionsData)
+          setAppSettings({
+            numberPadEnabled: settingsData.numberPadEnabled || 'false'
+          })
+          
+          // Set last used wallet (most recent transaction)
+          if (transactionsData.length > 0) {
+            const latestTransaction = transactionsData.reduce((latest: any, current: any) => 
+              new Date(current.date) > new Date(latest.date) ? current : latest
+            )
+            setLastUsedWalletId(latestTransaction.walletId)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  // Calculate fee for a transaction
-  const calculateTransactionFee = (walletId: string, amount: number): number => {
-    const wallet = wallets.find(w => w.id === walletId)
-    if (!wallet) return 0
-    
-    let calculatedFee = 0
-    
-    switch (wallet.feeType) {
-      case 'percentage':
-        const feePercentage = wallet.feePercentage || 0
-        calculatedFee = (amount * feePercentage) / 100
-        break
-      case 'perThousand':
-        const feePerThousand = wallet.feePerThousand || 0
-        calculatedFee = Math.ceil(amount / 1000) * feePerThousand
-        break
-      case 'fixed':
-        calculatedFee = wallet.feePercentage || 0
-        break
-      default:
-        calculatedFee = 0
+    loadData()
+  }, [])
+
+  // Clear alert message after 3 seconds
+  useEffect(() => {
+    if (alertMessage) {
+      const timer = setTimeout(() => {
+        setAlertMessage('')
+      }, 3000)
+      return () => clearTimeout(timer)
     }
-    
-    const maxFeeAmount = wallet.maxFeeAmount || 0
-    const minFeeAmount = wallet.minFeeAmount || 0
-    let feeAmount = calculatedFee
-    
-    // Apply maximum fee limit if set
-    if (maxFeeAmount > 0 && feeAmount > maxFeeAmount) {
-      feeAmount = maxFeeAmount
+  }, [alertMessage])
+
+  // Auto-select last used wallet when opening transaction dialog
+  useEffect(() => {
+    if (showTransaction && lastUsedWalletId && !transactionForm.walletId) {
+      setTransactionForm(prev => ({ ...prev, walletId: lastUsedWalletId }))
     }
+  }, [showTransaction, lastUsedWalletId])
+
+  // Calculate total fees across all wallets
+  const totalFeesAcrossAllWallets = useMemo(() => {
+    return wallets.reduce((total, wallet) => total + (wallet.totalFeesEarned || 0), 0)
+  }, [wallets])
+
+  // Calculate net profit (إجمالي الأرباح الصافية)
+  const calculateNetProfit = () => {
+    const totalFees = totalFeesAcrossAllWallets
+    const totalBalance = wallets.reduce((total, wallet) => total + (wallet.balance || 0), 0)
+    const cashTreasuryBalance = cashTreasury?.balance || 0
     
-    // Apply minimum fee if set and calculated fee is less than minimum
-    if (minFeeAmount > 0 && feeAmount < minFeeAmount) {
-      feeAmount = minFeeAmount
+    return {
+      totalFees,
+      totalWalletBalance: totalBalance,
+      cashTreasuryBalance,
+      netProfit: totalFees + cashTreasuryBalance - totalBalance
     }
-    
-    return feeAmount
   }
 
-  // Get fee description for display
-  const getFeeDescription = (wallet: any): string => {
-    let description = ''
-    switch (wallet.feeType) {
-      case 'percentage':
-        description = `${wallet.feePercentage || 0}% من المبلغ`
-        break
-      case 'perThousand':
-        description = `${wallet.feePerThousand || 0} جنيه لكل 1000 جنيه`
-        break
-      case 'fixed':
-        description = `${wallet.feePercentage || 0} جنيه ثابت`
-        break
-      default:
-        description = 'لا توجد رسوم'
-    }
-    
-    const maxFee = wallet.maxFeeAmount || 0
-    const minFee = wallet.minFeeAmount || 0
-    
-    if (maxFee > 0 && minFee > 0) {
-      description += ` (حد أدنى ${minFee} ج.م، حد أقصى ${maxFee} ج.م)`
-    } else if (maxFee > 0) {
-      description += ` (حد أقصى ${maxFee} ج.م)`
-    } else if (minFee > 0) {
-      description += ` (حد أدنى ${minFee} ج.م)`
-    }
-    
-    return description
-  }
+  const netProfitData = useMemo(() => calculateNetProfit(), [wallets, cashTreasury, totalFeesAcrossAllWallets])
+
+  // Filter out archived wallets for main display
+  const activeWallets = wallets.filter(w => !w.isArchived)
+  const archivedWallets = wallets.filter(w => w.isArchived)
+
+  // Check if there are any active wallets
+  const hasActiveWallets = activeWallets.length > 0
 
   // Calculate monthly statistics for each wallet
   const calculateWalletMonthlyStats = (walletId: string) => {
@@ -319,27 +360,6 @@ export default function WalletManagement() {
     }
   }
 
-  // Calculate total fees across all wallets
-  const totalFeesAcrossAllWallets = useMemo(() => {
-    return wallets.reduce((total, wallet) => total + (wallet.totalFeesEarned || 0), 0)
-  }, [wallets])
-
-  // Calculate net profit (إجمالي الأرباح الصافية)
-  const calculateNetProfit = () => {
-    const totalFees = totalFeesAcrossAllWallets
-    const totalBalance = wallets.reduce((total, wallet) => total + (wallet.balance || 0), 0)
-    const cashTreasuryBalance = cashTreasury?.balance || 0
-    
-    return {
-      totalFees,
-      totalWalletBalance: totalBalance,
-      cashTreasuryBalance,
-      netProfit: totalFees + cashTreasuryBalance - totalBalance
-    }
-  }
-
-  const netProfitData = useMemo(() => calculateNetProfit(), [wallets, cashTreasury, totalFeesAcrossAllWallets])
-
   // Check for low balance alerts
   const checkBalanceAlerts = () => {
     const alerts = []
@@ -382,84 +402,186 @@ export default function WalletManagement() {
 
   const stats = useMemo(() => calculateMonthlyStats(), [transactions])
   const monthlyReturnRate = useMemo(() => calculateMonthlyReturnRate(), [cashTreasury, cashTreasuryTransactions])
+  const balanceAlerts = useMemo(() => checkBalanceAlerts(), [activeWallets])
 
   // Update monthly limit state when stats change
   useEffect(() => {
     setMonthlyLimit(stats.monthlyLimit)
   }, [stats.monthlyLimit])
 
-  // Filter out archived wallets for main display
-  const activeWallets = wallets.filter(w => !w.isArchived)
-  const archivedWallets = wallets.filter(w => w.isArchived)
-
-  // Check if there are any active wallets
-  const hasActiveWallets = activeWallets.length > 0
-
-  // Check for low balance alerts (moved after activeWallets is defined)
-  const balanceAlerts = useMemo(() => checkBalanceAlerts(), [activeWallets])
-
-  // Load data from API
+  // Check authentication on component mount
   useEffect(() => {
-    const loadData = async () => {
+    const token = localStorage.getItem('authToken')
+    const userData = localStorage.getItem('user')
+    const businessData = localStorage.getItem('businessAccounts')
+    const rolesData = localStorage.getItem('userRoles')
+    
+    if (token && userData) {
       try {
-        const [walletsResponse, transactionsResponse, settingsResponse, cashTreasuryResponse, cashTreasuryTransactionsResponse] = await Promise.all([
-          fetch('/api/wallets'),
-          fetch('/api/transactions'),
-          fetch('/api/settings'),
-          fetch('/api/cash-treasury'),
-          fetch('/api/cash-treasury/transactions')
-        ])
-        
-        if (walletsResponse.ok && transactionsResponse.ok && settingsResponse.ok && cashTreasuryResponse.ok && cashTreasuryTransactionsResponse.ok) {
-          const [walletsData, transactionsData, settingsData, cashTreasuryData, cashTreasuryTransactionsData] = await Promise.all([
-            walletsResponse.json(),
-            transactionsResponse.json(),
-            settingsResponse.json(),
-            cashTreasuryResponse.json(),
-            cashTreasuryTransactionsResponse.json()
-          ])
-          setWallets(walletsData)
-          setTransactions(transactionsData)
-          setCashTreasury(cashTreasuryData)
-          setCashTreasuryTransactions(cashTreasuryTransactionsData)
-          setAppSettings({
-            numberPadEnabled: settingsData.numberPadEnabled || 'false'
-          })
-          
-          // Set last used wallet (most recent transaction)
-          if (transactionsData.length > 0) {
-            const latestTransaction = transactionsData.reduce((latest: any, current: any) => 
-              new Date(current.date) > new Date(latest.date) ? current : latest
-            )
-            setLastUsedWalletId(latestTransaction.walletId)
-          }
-        }
+        setUser(JSON.parse(userData))
+        setBusinessAccounts(businessData ? JSON.parse(businessData) : [])
+        setUserRoles(rolesData ? JSON.parse(rolesData) : [])
+        setIsAuthenticated(true)
       } catch (error) {
-        console.error('Error loading data:', error)
-      } finally {
-        setIsLoading(false)
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('businessAccounts')
+        localStorage.removeItem('userRoles')
       }
     }
-
-    loadData()
+    
+    setAuthLoading(false)
   }, [])
 
-  // Clear alert message after 3 seconds
-  useEffect(() => {
-    if (alertMessage) {
-      const timer = setTimeout(() => {
-        setAlertMessage('')
-      }, 3000)
-      return () => clearTimeout(timer)
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('authToken')
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user')
+      localStorage.removeItem('businessAccounts')
+      localStorage.removeItem('userRoles')
+      setIsAuthenticated(false)
+      setUser(null)
+      setBusinessAccounts([])
+      setUserRoles([])
+      router.push('/auth/login')
     }
-  }, [alertMessage])
+  }
 
-  // Auto-select last used wallet when opening transaction dialog
-  useEffect(() => {
-    if (showTransaction && lastUsedWalletId && !transactionForm.walletId) {
-      setTransactionForm(prev => ({ ...prev, walletId: lastUsedWalletId }))
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">جاري التحميل...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Wallet className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+            <CardTitle>نظام المحفظة الإلكترونية</CardTitle>
+            <CardDescription>
+              يرجى تسجيل الدخول للوصول إلى النظام
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={() => router.push('/auth/login')}
+              className="w-full"
+            >
+              تسجيل الدخول
+            </Button>
+            <Button 
+              onClick={() => router.push('/auth/register')}
+              variant="outline"
+              className="w-full"
+            >
+              إنشاء حساب جديد
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Predefined wallet logos
+  const predefinedLogos = [
+    '🏦', '💳', '💰', '💵', '💴', '💶', '💷', '🪙', '🤑', '💸',
+    '📱', '🏪', '🏛️', '🏧', '💼', '🏭', '🏢', '🏣', '🏤', '🏥'
+  ]
+
+  // Calculate fee for a transaction
+  const calculateTransactionFee = (walletId: string, amount: number): number => {
+    const wallet = wallets.find(w => w.id === walletId)
+    if (!wallet) return 0
+    
+    let calculatedFee = 0
+    
+    switch (wallet.feeType) {
+      case 'percentage':
+        const feePercentage = wallet.feePercentage || 0
+        calculatedFee = (amount * feePercentage) / 100
+        break
+      case 'perThousand':
+        const feePerThousand = wallet.feePerThousand || 0
+        calculatedFee = Math.ceil(amount / 1000) * feePerThousand
+        break
+      case 'fixed':
+        calculatedFee = wallet.feePercentage || 0
+        break
+      default:
+        calculatedFee = 0
     }
-  }, [showTransaction, lastUsedWalletId])
+    
+    const maxFeeAmount = wallet.maxFeeAmount || 0
+    const minFeeAmount = wallet.minFeeAmount || 0
+    let feeAmount = calculatedFee
+    
+    // Apply maximum fee limit if set
+    if (maxFeeAmount > 0 && feeAmount > maxFeeAmount) {
+      feeAmount = maxFeeAmount
+    }
+    
+    // Apply minimum fee if set and calculated fee is less than minimum
+    if (minFeeAmount > 0 && feeAmount < minFeeAmount) {
+      feeAmount = minFeeAmount
+    }
+    
+    return feeAmount
+  }
+
+  // Get fee description for display
+  const getFeeDescription = (wallet: any): string => {
+    let description = ''
+    switch (wallet.feeType) {
+      case 'percentage':
+        description = `${wallet.feePercentage || 0}% من المبلغ`
+        break
+      case 'perThousand':
+        description = `${wallet.feePerThousand || 0} جنيه لكل 1000 جنيه`
+        break
+      case 'fixed':
+        description = `${wallet.feePercentage || 0} جنيه ثابت`
+        break
+      default:
+        description = 'لا توجد رسوم'
+    }
+    
+    const maxFee = wallet.maxFeeAmount || 0
+    const minFee = wallet.minFeeAmount || 0
+    
+    if (maxFee > 0 && minFee > 0) {
+      description += ` (حد أدنى ${minFee} ج.م، حد أقصى ${maxFee} ج.م)`
+    } else if (maxFee > 0) {
+      description += ` (حد أقصى ${maxFee} ج.م)`
+    } else if (minFee > 0) {
+      description += ` (حد أدنى ${minFee} ج.م)`
+    }
+    
+    return description
+  }
 
   const handleEditWallet = (wallet: Wallet) => {
     setEditingWallet(wallet)
@@ -808,12 +930,24 @@ export default function WalletManagement() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">إدارة المحافظ</h1>
               <p className="text-muted-foreground mt-1">إدارة محافظك الإلكترونية ومعاملاتك المالية</p>
+              {user && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm text-muted-foreground">مرحباً بك:</span>
+                  <span className="text-sm font-medium">{user.username}</span>
+                  {businessAccounts.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Building className="h-3 w-3 ml-1" />
+                      {businessAccounts.length} منشأة
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -850,12 +984,54 @@ export default function WalletManagement() {
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">الإعدادات</span>
               </Button>
+              {businessAccounts.length === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/business/register')}
+                  className="flex items-center gap-2"
+                >
+                  <Store className="h-4 w-4" />
+                  <span className="hidden sm:inline">إنشاء منشأة</span>
+                </Button>
+              )}
+              {businessAccounts.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/branches')}
+                  className="flex items-center gap-2"
+                >
+                  <Building className="h-4 w-4" />
+                  <span className="hidden sm:inline">إدارة الفروع</span>
+                </Button>
+              )}
+              {businessAccounts.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/users')}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">إدارة المستخدمين</span>
+                </Button>
+              )}
               <Button
                 onClick={() => setShowAddWallet(true)}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
                 <span>إضافة محفظة</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-red-600 hover:text-red-700"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">تسجيل الخروج</span>
               </Button>
             </div>
           </div>

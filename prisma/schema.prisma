@@ -13,6 +13,166 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id              String   @id @default(cuid())
+  username        String   @unique
+  email           String?  @unique
+  phone           String   @unique
+  nationalId      String   @unique
+  password        String
+  isActive        Boolean  @default(true)
+  isEmailVerified Boolean  @default(false)
+  isPhoneVerified Boolean  @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  userBusinessAccounts UserBusinessAccount[]
+  userBranches         UserBranch[]
+  userRoles            UserRole[]
+  userSessions         UserSession[]
+  passwordResets       PasswordReset[]
+  
+  @@map("users")
+}
+
+model BusinessAccount {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  commercialId    String?  @unique
+  taxId           String?  @unique
+  address         String?
+  phone           String
+  email           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  branches        Branch[]
+  userBusinessAccounts UserBusinessAccount[]
+  userRoles       UserRole[]
+  
+  @@map("business_accounts")
+}
+
+model Branch {
+  id              String   @id @default(cuid())
+  businessAccountId String
+  name            String
+  address         String?
+  phone           String?
+  email           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  businessAccount BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
+  userBranches    UserBranch[]
+  userRoles       UserRole[]
+  
+  @@map("branches")
+}
+
+model Role {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  permissions     String   // JSON string of permissions
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  userRoles       UserRole[]
+  
+  @@map("roles")
+}
+
+model UserRole {
+  id              String   @id @default(cuid())
+  userId          String
+  roleId          String
+  businessAccountId String?
+  branchId        String?
+  isActive        Boolean  @default(true)
+  assignedAt      DateTime @default(now())
+  assignedBy      String?
+  
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  businessAccount BusinessAccount? @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
+  branch          Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId, businessAccountId, branchId])
+  @@map("user_roles")
+}
+
+model UserBusinessAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  businessAccountId String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessAccount BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, businessAccountId])
+  @@map("user_business_accounts")
+}
+
+model UserBranch {
+  id              String   @id @default(cuid())
+  userId          String
+  branchId        String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch          Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, branchId])
+  @@map("user_branches")
+}
+
+model UserSession {
+  id              String   @id @default(cuid())
+  userId          String
+  token           String   @unique
+  refreshToken    String?  @unique
+  ipAddress       String?
+  userAgent       String?
+  isActive        Boolean  @default(true)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+model PasswordReset {
+  id              String   @id @default(cuid())
+  userId          String
+  token           String   @unique
+  isUsed          Boolean  @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("password_resets")
+}
+
 model Wallet {
   id              String   @id @default(cuid())
   uuid            String   @unique @default(uuid())
