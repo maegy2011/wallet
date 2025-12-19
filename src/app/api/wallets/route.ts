@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, mobileNumber, logo, feeType, feePercentage, feePerThousand, maxFeeAmount, minFeeAmount } = await request.json()
+    const { name, mobileNumber, logo, monthlyLimit, dailyLimit, minBalanceAlert, feeType, feePercentage, feePerThousand, maxFeeAmount, minFeeAmount } = await request.json()
 
     if (!name || !mobileNumber) {
       return Response.json({ error: 'Name and mobile number are required' }, { status: 400 })
@@ -45,6 +45,9 @@ export async function POST(request: Request) {
         name,
         mobileNumber,
         logo: logo || null,
+        monthlyLimit: monthlyLimit || 200000,
+        dailyLimit: dailyLimit || 60000,
+        minBalanceAlert: minBalanceAlert || 1000,
         feeType: feeType || 'percentage',
         feePercentage: feePercentage || 0,
         feePerThousand: feePerThousand || 0,

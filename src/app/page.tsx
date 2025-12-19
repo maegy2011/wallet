@@ -28,6 +28,9 @@ interface Wallet {
   totalDeposits: number
   totalWithdrawals: number
   monthlyTransactions: number
+  monthlyLimit: number
+  dailyLimit: number
+  minBalanceAlert: number
   feeType: string
   feePercentage: number
   feePerThousand: number
@@ -94,6 +97,9 @@ export default function WalletManagement() {
     name: '',
     mobileNumber: '',
     logo: '',
+    monthlyLimit: '200000',
+    dailyLimit: '60000',
+    minBalanceAlert: '1000',
     feeType: 'percentage',
     feePercentage: '',
     feePerThousand: '',
@@ -105,6 +111,9 @@ export default function WalletManagement() {
     name: '',
     mobileNumber: '',
     logo: '',
+    monthlyLimit: '200000',
+    dailyLimit: '60000',
+    minBalanceAlert: '1000',
     feeType: 'percentage',
     feePercentage: '',
     feePerThousand: '',
@@ -243,6 +252,38 @@ export default function WalletManagement() {
     }
   }
 
+  // Calculate daily statistics for each wallet
+  const calculateWalletDailyStats = (walletId: string) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    const walletTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date)
+      return t.walletId === walletId &&
+             transactionDate >= today && 
+             transactionDate < tomorrow
+    })
+
+    const totalDeposits = walletTransactions
+      .filter(t => t.type === 'deposit')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const totalWithdrawals = walletTransactions
+      .filter(t => t.type === 'withdrawal')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const dailyLimit = totalDeposits + totalWithdrawals
+    
+    return {
+      totalDeposits,
+      totalWithdrawals,
+      dailyLimit,
+      transactionCount: walletTransactions.length
+    }
+  }
+
   // Calculate overall monthly statistics
   const calculateMonthlyStats = () => {
     const currentMonth = new Date().getMonth()
@@ -283,6 +324,39 @@ export default function WalletManagement() {
     return wallets.reduce((total, wallet) => total + (wallet.totalFeesEarned || 0), 0)
   }, [wallets])
 
+  // Calculate net profit (إجمالي الأرباح الصافية)
+  const calculateNetProfit = () => {
+    const totalFees = totalFeesAcrossAllWallets
+    const totalBalance = wallets.reduce((total, wallet) => total + (wallet.balance || 0), 0)
+    const cashTreasuryBalance = cashTreasury?.balance || 0
+    
+    return {
+      totalFees,
+      totalWalletBalance: totalBalance,
+      cashTreasuryBalance,
+      netProfit: totalFees + cashTreasuryBalance - totalBalance
+    }
+  }
+
+  const netProfitData = useMemo(() => calculateNetProfit(), [wallets, cashTreasury, totalFeesAcrossAllWallets])
+
+  // Check for low balance alerts
+  const checkBalanceAlerts = () => {
+    const alerts = []
+    for (const wallet of activeWallets) {
+      if (wallet.balance < wallet.minBalanceAlert) {
+        alerts.push({
+          walletId: wallet.id,
+          walletName: wallet.name,
+          currentBalance: wallet.balance,
+          minBalance: wallet.minBalanceAlert,
+          deficit: wallet.minBalanceAlert - wallet.balance
+        })
+      }
+    }
+    return alerts
+  }
+
   // Calculate monthly return rate
   const calculateMonthlyReturnRate = () => {
     if (!cashTreasury || cashTreasury.totalDeposits === 0) return 0
@@ -320,6 +394,9 @@ export default function WalletManagement() {
 
   // Check if there are any active wallets
   const hasActiveWallets = activeWallets.length > 0
+
+  // Check for low balance alerts (moved after activeWallets is defined)
+  const balanceAlerts = useMemo(() => checkBalanceAlerts(), [activeWallets])
 
   // Load data from API
   useEffect(() => {
@@ -390,6 +467,9 @@ export default function WalletManagement() {
       name: wallet.name,
       mobileNumber: wallet.mobileNumber,
       logo: wallet.logo || '',
+      monthlyLimit: (wallet.monthlyLimit || 200000).toString(),
+      dailyLimit: (wallet.dailyLimit || 60000).toString(),
+      minBalanceAlert: (wallet.minBalanceAlert || 1000).toString(),
       feeType: wallet.feeType || 'percentage',
       feePercentage: (wallet.feePercentage || 0).toString(),
       feePerThousand: (wallet.feePerThousand || 0).toString(),
@@ -405,13 +485,16 @@ export default function WalletManagement() {
       return
     }
 
+    const monthlyLimit = parseFloat(editForm.monthlyLimit) || 200000
+    const dailyLimit = parseFloat(editForm.dailyLimit) || 60000
+    const minBalanceAlert = parseFloat(editForm.minBalanceAlert) || 1000
     const feePercentage = parseFloat(editForm.feePercentage) || 0
     const feePerThousand = parseFloat(editForm.feePerThousand) || 0
     const maxFeeAmount = parseFloat(editForm.maxFeeAmount) || 0
     const minFeeAmount = parseFloat(editForm.minFeeAmount) || 0
 
-    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0) {
-      setAlertMessage('الرسوم يجب أن تكون أرقام موجبة')
+    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0 || monthlyLimit < 0 || dailyLimit < 0 || minBalanceAlert < 0) {
+      setAlertMessage('جميع القيم يجب أن تكون أرقام موجبة')
       return
     }
 
@@ -424,6 +507,9 @@ export default function WalletManagement() {
           name: editForm.name,
           mobileNumber: editForm.mobileNumber,
           logo: editForm.logo || null,
+          monthlyLimit,
+          dailyLimit,
+          minBalanceAlert,
           feeType: editForm.feeType,
           feePercentage,
           feePerThousand,
@@ -459,13 +545,16 @@ export default function WalletManagement() {
       return
     }
 
+    const monthlyLimit = parseFloat(walletForm.monthlyLimit) || 200000
+    const dailyLimit = parseFloat(walletForm.dailyLimit) || 60000
+    const minBalanceAlert = parseFloat(walletForm.minBalanceAlert) || 1000
     const feePercentage = parseFloat(walletForm.feePercentage) || 0
     const feePerThousand = parseFloat(walletForm.feePerThousand) || 0
     const maxFeeAmount = parseFloat(walletForm.maxFeeAmount) || 0
     const minFeeAmount = parseFloat(walletForm.minFeeAmount) || 0
 
-    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0) {
-      setAlertMessage('الرسوم يجب أن تكون أرقام موجبة')
+    if (feePercentage < 0 || feePerThousand < 0 || maxFeeAmount < 0 || minFeeAmount < 0 || monthlyLimit < 0 || dailyLimit < 0 || minBalanceAlert < 0) {
+      setAlertMessage('جميع القيم يجب أن تكون أرقام موجبة')
       return
     }
 
@@ -478,6 +567,9 @@ export default function WalletManagement() {
           name: walletForm.name,
           mobileNumber: walletForm.mobileNumber,
           logo: walletForm.logo || null,
+          monthlyLimit,
+          dailyLimit,
+          minBalanceAlert,
           feeType: walletForm.feeType,
           feePercentage,
           feePerThousand,
@@ -489,7 +581,7 @@ export default function WalletManagement() {
       if (response.ok) {
         const newWallet = await response.json()
         setWallets([...wallets, newWallet])
-        setWalletForm({ name: '', mobileNumber: '', logo: '', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '', minFeeAmount: '' })
+        setWalletForm({ name: '', mobileNumber: '', logo: '', monthlyLimit: '200000', dailyLimit: '60000', minBalanceAlert: '1000', feeType: 'percentage', feePercentage: '', feePerThousand: '', maxFeeAmount: '', minFeeAmount: '' })
         setShowAddWallet(false)
         setAlertMessage('تمت إضافة المحفظة بنجاح')
       }
@@ -512,11 +604,23 @@ export default function WalletManagement() {
       return
     }
 
-    // Check monthly limit for the specific wallet
+    // Check monthly and daily limits for the specific wallet
+    const wallet = wallets.find(w => w.id === transactionForm.walletId)
+    if (!wallet) {
+      setAlertMessage('المحفظة المحددة غير موجودة')
+      return
+    }
+
     const walletStats = calculateWalletMonthlyStats(transactionForm.walletId)
+    const dailyStats = calculateWalletDailyStats(transactionForm.walletId)
     
-    if (walletStats.monthlyLimit + amount > 200000) {
-      setAlertMessage('تجاوز الحد الشهري المسموح به (200,000 جنيه) لهذه المحفظة')
+    if (walletStats.monthlyLimit + amount > wallet.monthlyLimit) {
+      setAlertMessage(`تجاوز الحد الشهري المسموح به (${wallet.monthlyLimit.toLocaleString()} جنيه) لهذه المحفظة`)
+      return
+    }
+
+    if (dailyStats.dailyLimit + amount > wallet.dailyLimit) {
+      setAlertMessage(`تجاوز الحد اليومي المسموح به (${wallet.dailyLimit.toLocaleString()} جنيه) لهذه المحفظة`)
       return
     }
 
@@ -802,15 +906,32 @@ export default function WalletManagement() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">نسبة العائد الشهري</CardTitle>
-              <ArrowUpRight className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium">صافي الربح</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{monthlyReturnRate.toFixed(2)}%</div>
-              <p className="text-xs text-muted-foreground">هذا الشهر</p>
+              <div className="text-2xl font-bold">{netProfitData.netProfit.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">جنيه</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Balance Alerts */}
+        {balanceAlerts.length > 0 && (
+          <div className="mb-6">
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <div className="font-medium mb-2">تنبيهات انخفاض الرصيد:</div>
+                {balanceAlerts.map((alert, index) => (
+                  <div key={index} className="text-sm">
+                    • محفظة <strong>{alert.walletName}</strong>: الرصيد الحالي {alert.currentBalance.toLocaleString()} جنيه (أقل من الحد الأدنى {alert.minBalanceAlert.toLocaleString()} جنيه)
+                  </div>
+                ))}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1001,6 +1122,39 @@ export default function WalletManagement() {
                   value={walletForm.logo}
                   onChange={(e) => setWalletForm({ ...walletForm, logo: e.target.value })}
                   placeholder="أو أدخل رابط صورة الشعار"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="monthlyLimit">الحد الشهري للمعاملات (جنيه)</Label>
+                <Input
+                  id="monthlyLimit"
+                  type="number"
+                  value={walletForm.monthlyLimit}
+                  onChange={(e) => setWalletForm({ ...walletForm, monthlyLimit: e.target.value })}
+                  placeholder="200000"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="dailyLimit">الحد اليومي للمعاملات (جنيه)</Label>
+                <Input
+                  id="dailyLimit"
+                  type="number"
+                  value={walletForm.dailyLimit}
+                  onChange={(e) => setWalletForm({ ...walletForm, dailyLimit: e.target.value })}
+                  placeholder="60000"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="minBalanceAlert">تنبيه عند انخفاض الرصيد عن (جنيه)</Label>
+                <Input
+                  id="minBalanceAlert"
+                  type="number"
+                  value={walletForm.minBalanceAlert}
+                  onChange={(e) => setWalletForm({ ...walletForm, minBalanceAlert: e.target.value })}
+                  placeholder="1000"
                 />
               </div>
 
@@ -1410,6 +1564,36 @@ export default function WalletManagement() {
                   value={editForm.logo}
                   onChange={(e) => setEditForm({ ...editForm, logo: e.target.value })}
                   placeholder="أو أدخل رابط صورة الشعار"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-monthlyLimit">الحد الشهري للمعاملات (جنيه)</Label>
+                <Input
+                  id="edit-monthlyLimit"
+                  type="number"
+                  value={editForm.monthlyLimit}
+                  onChange={(e) => setEditForm({ ...editForm, monthlyLimit: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-dailyLimit">الحد اليومي للمعاملات (جنيه)</Label>
+                <Input
+                  id="edit-dailyLimit"
+                  type="number"
+                  value={editForm.dailyLimit}
+                  onChange={(e) => setEditForm({ ...editForm, dailyLimit: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-minBalanceAlert">تنبيه عند انخفاض الرصيد عن (جنيه)</Label>
+                <Input
+                  id="edit-minBalanceAlert"
+                  type="number"
+                  value={editForm.minBalanceAlert}
+                  onChange={(e) => setEditForm({ ...editForm, minBalanceAlert: e.target.value })}
                 />
               </div>
 
