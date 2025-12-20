@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     

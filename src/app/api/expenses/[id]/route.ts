@@ -3,10 +3,11 @@ import { db } from '@/lib/db';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const expenseId = params.id;
+    const { id } = await params
+    const expenseId = id;
 
     // Get the expense to refund the amount
     const expense = await db.expense.findUnique({

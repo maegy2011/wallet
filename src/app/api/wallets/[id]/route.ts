@@ -3,21 +3,24 @@ import { db } from '@/lib/db'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
   try {
     const wallet = await db.wallet.findUnique({
       where: {
-        id: params.id
+        id: id
       }
     })
 
     if (!wallet) {
+    const { id } = await params
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }
 
     return NextResponse.json(wallet)
   } catch (error) {
+    const { id } = await params
     console.error('Error fetching wallet:', error)
     return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 })
   }
@@ -25,8 +28,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
   try {
     const body = await request.json()
     const {
@@ -45,10 +49,11 @@ export async function PUT(
 
     // Check if wallet exists
     const existingWallet = await db.wallet.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!existingWallet) {
+    const { id } = await params
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }
 
@@ -56,18 +61,19 @@ export async function PUT(
     const duplicateWallet = await db.wallet.findFirst({
       where: {
         mobileNumber,
-        id: { not: params.id },
+        id: { not: id },
         isArchived: false
       }
     })
 
     if (duplicateWallet) {
+    const { id } = await params
       return NextResponse.json({ error: 'Mobile number already exists' }, { status: 400 })
     }
 
     const updatedWallet = await db.wallet.update({
       where: {
-        id: params.id
+        id: id
       },
       data: {
         name,
@@ -87,6 +93,7 @@ export async function PUT(
 
     return NextResponse.json(updatedWallet)
   } catch (error) {
+    const { id } = await params
     console.error('Error updating wallet:', error)
     return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 })
   }
@@ -94,22 +101,24 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
   try {
     // Check if wallet exists
     const existingWallet = await db.wallet.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!existingWallet) {
+    const { id } = await params
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
     }
 
     // Soft delete by archiving
     const archivedWallet = await db.wallet.update({
       where: {
-        id: params.id
+        id: id
       },
       data: {
         isArchived: true,
@@ -120,6 +129,7 @@ export async function DELETE(
 
     return NextResponse.json(archivedWallet)
   } catch (error) {
+    const { id } = await params
     console.error('Error archiving wallet:', error)
     return NextResponse.json({ error: 'Failed to archive wallet' }, { status: 500 })
   }

@@ -112,7 +112,7 @@ export default function SettingsPage() {
       })
 
       if (response.ok) {
-        setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isArchived: false, archivedAt: null } : w))
+        setWallets(wallets.map(w => w.id === wallet.id ? { ...w, isArchived: false, archivedAt: undefined } : w))
         setAlertMessage('تم استعادة المحفظة بنجاح')
       }
     } catch (error) {

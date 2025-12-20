@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     const closingBalance = openingBalance + netChange;
 
     // Calculate monthly breakdown
-    const monthlyBreakdown = [];
+    const monthlyBreakdown: any[] = [];
     for (let month = 0; month < 12; month++) {
       const monthDate = new Date(year, month);
       const monthStart = startOfMonth(monthDate);
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate quarterly breakdown
-    const quarterlyBreakdown = [];
+    const quarterlyBreakdown: any[] = [];
     for (let quarter = 0; quarter < 4; quarter++) {
       const quarterStartMonth = quarter * 3;
       const quarterStart = startOfMonth(new Date(year, quarterStartMonth));

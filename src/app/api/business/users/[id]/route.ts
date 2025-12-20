@@ -13,8 +13,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
     const { id } = await params
+  try {
     const body = await request.json()
     const validatedData = updateUserSchema.parse(body)
     
@@ -26,6 +26,7 @@ export async function PUT(
     })
 
     if (!existingUser) {
+    const { id } = await params
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
     }
 
@@ -47,6 +48,7 @@ export async function PUT(
     })
 
     if (duplicateUser) {
+    const { id } = await params
       return NextResponse.json({ error: 'البيانات المدخلة مستخدمة بالفعل' }, { status: 400 })
     }
 
@@ -66,10 +68,12 @@ export async function PUT(
       user: updatedUser
     })
   } catch (error) {
+    const { id } = await params
     if (error instanceof z.ZodError) {
+    const { id } = await params
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     
@@ -82,8 +86,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
     const { id } = await params
+  try {
 
     // Check if user exists
     const existingUser = await db.user.findFirst({
@@ -91,6 +95,7 @@ export async function DELETE(
     })
 
     if (!existingUser) {
+    const { id } = await params
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
     }
 
@@ -103,6 +108,7 @@ export async function DELETE(
       message: 'تم حذف المستخدم بنجاح'
     })
   } catch (error) {
+    const { id } = await params
     console.error('Error deleting user:', error)
     return NextResponse.json({ error: 'فشل في حذف المستخدم' }, { status: 500 })
   }

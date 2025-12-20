@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         token,
         expiresAt,
-        ipAddress: request.ip || 'unknown',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
       }
     })
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     

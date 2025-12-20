@@ -55,6 +55,7 @@ interface Wallet {
   mobileNumber: string
   balance: number
   logo?: string
+  isArchived?: boolean
 }
 
 interface Transfer {
@@ -551,6 +552,7 @@ export default function CashTreasuryManagement() {
                     <NumberPad
                       value={transactionForm.amount}
                       onChange={(value) => setTransactionForm(prev => ({ ...prev, amount: value }))}
+                      onClear={() => setTransactionForm(prev => ({ ...prev, amount: '' }))}
                       placeholder="أدخل المبلغ"
                     />
                   ) : (
@@ -666,6 +668,7 @@ export default function CashTreasuryManagement() {
                     <NumberPad
                       value={transferForm.amount}
                       onChange={(value) => setTransferForm(prev => ({ ...prev, amount: value }))}
+                      onClear={() => setTransferForm(prev => ({ ...prev, amount: '' }))}
                       placeholder="أدخل المبلغ"
                     />
                   ) : (

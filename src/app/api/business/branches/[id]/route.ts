@@ -13,8 +13,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
     const { id } = await params
+  try {
     const body = await request.json()
     const validatedData = updateBranchSchema.parse(body)
     
@@ -26,6 +26,7 @@ export async function PUT(
     })
 
     if (!existingBranch) {
+    const { id } = await params
       return NextResponse.json({ error: 'الفرع غير موجود' }, { status: 404 })
     }
 
@@ -53,10 +54,12 @@ export async function PUT(
       branch: updatedBranch
     })
   } catch (error) {
+    const { id } = await params
     if (error instanceof z.ZodError) {
+    const { id } = await params
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     
@@ -69,8 +72,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
     const { id } = await params
+  try {
 
     // Check if branch exists
     const existingBranch = await db.branch.findFirst({
@@ -78,6 +81,7 @@ export async function POST(
     })
 
     if (!existingBranch) {
+    const { id } = await params
       return NextResponse.json({ error: 'الفرع غير موجود' }, { status: 404 })
     }
 
@@ -94,6 +98,7 @@ export async function POST(
       branch: archivedBranch
     })
   } catch (error) {
+    const { id } = await params
     console.error('Error archiving branch:', error)
     return NextResponse.json({ error: 'فشل في أرشفة الفرع' }, { status: 500 })
   }

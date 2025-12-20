@@ -3,9 +3,10 @@ import { db } from '@/lib/db'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { walletId, type, amount, description } = await request.json()
 
     if (!walletId || !type || !amount || !description) {
@@ -25,7 +26,7 @@ export async function PUT(
 
     // Get the transaction to be updated
     const existingTransaction = await db.transaction.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!existingTransaction) {
@@ -70,7 +71,7 @@ export async function PUT(
 
     // Update transaction
     const updatedTransaction = await db.transaction.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         walletId,
         type,
@@ -149,12 +150,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check if transaction exists
     const existingTransaction = await db.transaction.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!existingTransaction) {
@@ -166,7 +168,7 @@ export async function DELETE(
 
     // Delete transaction
     await db.transaction.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     // Recalculate wallet balance and total fees

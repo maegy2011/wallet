@@ -2,11 +2,12 @@ import { db } from '@/lib/db'
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const wallet = await db.wallet.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         isArchived: true,
         archivedAt: new Date()

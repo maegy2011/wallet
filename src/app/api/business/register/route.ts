@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     })
     
     // Create branches if provided
-    const createdBranches = []
+    const createdBranches: any[] = []
     if (branches && branches.length > 0) {
       for (const branchData of branches) {
         const branch = await db.branch.create({
@@ -146,7 +146,15 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        createdBranches.push(branch)
+        createdBranches.push({
+          id: branch.id,
+          name: branch.name,
+          address: branch.address,
+          phone: branch.phone,
+          email: branch.email,
+          isActive: branch.isActive,
+          createdAt: branch.createdAt
+        })
       }
     }
     
@@ -161,7 +169,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     

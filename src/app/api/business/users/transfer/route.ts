@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    if (!userRole || userRole.businessAccount.id !== targetBranch.businessAccountId) {
+    if (!userRole || !userRole.businessAccount || userRole.businessAccount.id !== targetBranch.businessAccountId) {
       return NextResponse.json({ error: 'لا يمكن نقل المستخدم إلى فرع منشأة مختلفة' }, { status: 400 })
     }
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         error: 'بيانات غير صحيحة',
-        details: error.errors.map(err => err.message)
+        details: error.issues.map(err => err.message)
       }, { status: 400 })
     }
     
