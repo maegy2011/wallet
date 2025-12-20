@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Eye, EyeOff, Wallet } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Wallet, Home } from 'lucide-react'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function LoginPage() {
+  const { login, isAuthenticated } = useAuth()
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -21,6 +23,13 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('')
   
   const router = useRouter()
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to summary page
+    if (isAuthenticated) {
+      router.push('/summary')
+    }
+  }, [isAuthenticated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,18 +49,29 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store token in localStorage
+        // Create user object for auth context
+        const userObject = {
+          id: data.user.id || '1',
+          name: data.user.name || formData.identifier,
+          email: data.user.email || formData.identifier,
+          businessName: data.user.businessName || '',
+          createdAt: new Date().toLocaleDateString('ar-EG')
+        }
+        
+        // Use auth context login
+        login(userObject)
+        
+        // Also store additional data if needed
         localStorage.setItem('authToken', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        localStorage.setItem('userRoles', JSON.stringify(data.roles))
-        localStorage.setItem('businessAccounts', JSON.stringify(data.businessAccounts))
-        localStorage.setItem('branches', JSON.stringify(data.branches))
+        localStorage.setItem('userRoles', JSON.stringify(data.roles || []))
+        localStorage.setItem('businessAccounts', JSON.stringify(data.businessAccounts || []))
+        localStorage.setItem('branches', JSON.stringify(data.branches || []))
         
         setSuccess('تم تسجيل الدخول بنجاح')
         
-        // Redirect to main page after successful login
+        // Redirect to summary page after successful login
         setTimeout(() => {
-          router.push('/')
+          router.push('/summary')
         }, 1000)
       } else {
         setError(data.error || 'فشل تسجيل الدخول')
@@ -87,6 +107,15 @@ export default function LoginPage() {
               إنشاء حساب جديد
             </Link>
           </p>
+          <div className="mt-4 text-center">
+            <Link 
+              href="/" 
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              <Home className="h-4 w-4" />
+              العودة للصفحة الرئيسية
+            </Link>
+          </div>
         </div>
         
         <Card>

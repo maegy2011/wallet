@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff, Wallet, User, Phone, Mail, CreditCard } from 'lucide-react'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function RegisterPage() {
+  const { login, isAuthenticated } = useAuth()
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -26,6 +28,13 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('')
   
   const router = useRouter()
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to summary page
+    if (isAuthenticated) {
+      router.push('/summary')
+    }
+  }, [isAuthenticated, router])
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
@@ -80,12 +89,37 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول')
+        // Create user object for auth context
+        const userObject = {
+          id: data.user?.id || '1',
+          name: data.user?.name || formData.username,
+          email: data.user?.email || formData.email,
+          businessName: data.user?.businessName || '',
+          createdAt: new Date().toLocaleDateString('ar-EG')
+        }
         
-        // Redirect to login page after successful registration
-        setTimeout(() => {
-          router.push('/auth/login')
-        }, 2000)
+        // Auto-login after successful registration
+        if (data.token) {
+          login(userObject)
+          localStorage.setItem('authToken', data.token)
+          localStorage.setItem('userRoles', JSON.stringify(data.roles || []))
+          localStorage.setItem('businessAccounts', JSON.stringify(data.businessAccounts || []))
+          localStorage.setItem('branches', JSON.stringify(data.branches || []))
+          
+          setSuccess('تم إنشاء الحساب بنجاح! يتم توجيهك الآن...')
+          
+          // Redirect to summary page after successful registration
+          setTimeout(() => {
+            router.push('/summary')
+          }, 1500)
+        } else {
+          setSuccess('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول')
+          
+          // Redirect to login page after successful registration
+          setTimeout(() => {
+            router.push('/auth/login')
+          }, 2000)
+        }
       } else {
         setError(data.error || 'فشل إنشاء الحساب')
       }
