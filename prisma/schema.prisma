@@ -54,6 +54,8 @@ model BusinessAccount {
   branches        Branch[]
   userBusinessAccounts UserBusinessAccount[]
   userRoles       UserRole[]
+  subscription    Subscription?
+  wallets         Wallet[]
   
   @@map("business_accounts")
 }
@@ -194,14 +196,19 @@ model Wallet {
   totalFeesEarned Float    @default(0) // Total fees earned by merchant
   isArchived      Boolean  @default(false) // Soft delete flag
   archivedAt      DateTime? // Archive timestamp
+  businessAccountId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  // Relations
+  businessAccount  BusinessAccount? @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
   transactions    Transaction[]
   expenses        Expense[]
   transfersFrom   Transfer[] @relation("TransferFrom")
   transfersTo     Transfer[] @relation("TransferTo")
   reports         Report[]
+  
+  @@map("wallets")
 }
 
 model Transaction {
@@ -290,4 +297,54 @@ model Report {
   generatedAt     DateTime @default(now())
   
   wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  businessAccountId String   @unique
+  plan              String   // 'basic', 'premium', 'enterprise'
+  status            String   // 'active', 'inactive', 'cancelled', 'expired'
+  startDate         DateTime @default(now())
+  endDate           DateTime?
+  monthlyPrice      Float    @default(50)
+  maxWallets        Int      @default(10)
+  maxBranches       Int      @default(5)
+  maxUsers          Int      @default(20)
+  autoRenew         Boolean  @default(true)
+  paymentMethod     String?  // 'card', 'bank_transfer', 'cash'
+  lastPaymentAt     DateTime?
+  nextBillingDate   DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  businessAccount   BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
+  payments          Payment[]
+  
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  subscriptionId    String
+  amount            Float
+  currency          String   @default("EGP")
+  paymentMethod     String   // 'card', 'bank_transfer', 'cash'
+  status            String   // 'pending', 'completed', 'failed', 'refunded'
+  transactionId     String?  // External payment gateway transaction ID
+  paymentDate       DateTime @default(now())
+  dueDate           DateTime
+  paidAt            DateTime?
+  failureReason     String?
+  refundedAt        DateTime?
+  refundReason      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
 }
