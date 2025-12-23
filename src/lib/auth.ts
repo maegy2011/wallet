@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
             const tenantUser = user.tenantUsers.find(
               (tu) => tu.tenant.slug === tenantSlug && tu.isActive
             )
-            
+
             if (!tenantUser) {
               throw new Error("ليست لديك صلاحية الوصول إلى هذه المؤسسة")
             }
@@ -70,7 +70,7 @@ export const authOptions: NextAuthOptions = {
 
           // If no tenant specified, return user with first tenant (if any)
           const firstTenant = user.tenantUsers.find(tu => tu.isActive)
-          
+
           return {
             id: user.id,
             email: user.email,
@@ -81,7 +81,14 @@ export const authOptions: NextAuthOptions = {
             role: firstTenant?.role,
           }
         } catch (error) {
+          // Log full error for debugging but return null to NextAuth
           console.error("Auth error:", error)
+          // Return specific error messages for validation errors
+          if (error instanceof z.ZodError) {
+            console.error("Validation error:", error.errors)
+            return null
+          }
+          // Return null for all errors (NextAuth expects null on auth failure)
           return null
         }
       },

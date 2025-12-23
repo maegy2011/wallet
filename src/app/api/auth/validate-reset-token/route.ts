@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = validateTokenSchema.parse(body)
 
-    // For demo purposes, we'll validate the token format
-    // In production, you should validate against stored tokens with expiration checks
-    
-    // Simple validation - check if token is a valid UUID format
+    // Validate token format first
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     const isValidFormat = uuidRegex.test(validatedData.token)
 
@@ -25,22 +22,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // In a real implementation, you would:
-    // 1. Check if token exists in your password_resets table
-    // 2. Check if token is not expired
-    // 3. Return user info if valid
+    // Find user by reset token and check if token is not expired
+    const user = await db.user.findFirst({
+      where: {
+        resetToken: validatedData.token,
+        resetTokenExpires: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    })
 
-    // For demo, we'll accept any valid UUID format
+    if (!user) {
+      return NextResponse.json(
+        { error: "رمز إعادة التعيين غير صالح أو منتهي الصلاحية" },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json({
       valid: true,
       message: "الرمز صالح",
+      user: {
+        email: user.email,
+        name: user.name,
+      },
     })
   } catch (error) {
     console.error("Validate token error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }

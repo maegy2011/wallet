@@ -67,6 +67,14 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("2FA operation error:", error)
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: "حدث خطأ غير متوقع أثناء عملية المصادقة الثنائية" },
       { status: 500 }
@@ -122,6 +130,14 @@ async function disableTwoFactor(userId: string) {
 
 async function verifyTwoFactor(userId: string, code: string) {
   try {
+    // Validate code parameter
+    if (!code || typeof code !== 'string') {
+      return NextResponse.json(
+        { error: "كود التحقق مطلوب" },
+        { status: 400 }
+      )
+    }
+
     const user = await db.user.findUnique({
       where: { id: userId },
       select: {
@@ -136,7 +152,10 @@ async function verifyTwoFactor(userId: string, code: string) {
       )
     }
 
-    const isValid = authenticator.verify(code, user.twoFactorSecret)
+    const isValid = authenticator.verify({
+      token: code,
+      secret: user.twoFactorSecret
+    })
 
     if (!isValid) {
       return NextResponse.json(

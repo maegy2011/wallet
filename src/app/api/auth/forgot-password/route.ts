@@ -36,13 +36,12 @@ export async function POST(request: NextRequest) {
     const resetToken = uuidv4()
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
 
-    // Store reset token (you might want to create a separate table for this)
-    // For now, we'll use a simple approach with user table update
+    // Store reset token in user record
     await db.user.update({
       where: { id: user.id },
       data: {
-        // Note: You should add resetToken and resetTokenExpires to user schema
-        // For demo purposes, we'll proceed without storing the token
+        resetToken: resetToken,
+        resetTokenExpires: expiresAt,
       },
     })
 
@@ -68,10 +67,17 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Forgot password error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }

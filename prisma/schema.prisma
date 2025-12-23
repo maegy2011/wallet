@@ -52,6 +52,14 @@ model User {
   securityQuestion3  String?
   securityAnswer3   String?
 
+  // Password Reset
+  resetToken       String?
+  resetTokenExpires DateTime?
+
+  // Two-Factor Authentication
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+
   // Relations
   tenantUsers TenantUser[]
   invitationsSent Invitation[] @relation("InvitationSent")

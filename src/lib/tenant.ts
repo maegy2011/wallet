@@ -21,25 +21,30 @@ export async function requireAuth() {
 }
 
 export async function getCurrentTenant() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session?.user?.tenantId) {
-    return null
-  }
-  
-  const tenant = await db.tenant.findUnique({
-    where: { id: session.user.tenantId },
-    include: {
-      _count: {
-        select: {
-          users: true,
-          projects: true,
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.tenantId) {
+      return null
+    }
+
+    const tenant = await db.tenant.findUnique({
+      where: { id: session.user.tenantId },
+      include: {
+        _count: {
+          select: {
+            users: true,
+            projects: true,
+          }
         }
       }
-    }
-  })
-  
-  return tenant
+    })
+
+    return tenant
+  } catch (error) {
+    console.error("Get current tenant error:", error)
+    return null
+  }
 }
 
 export async function createTenant(data: {
@@ -48,42 +53,47 @@ export async function createTenant(data: {
   userId: string
   plan?: "FREE" | "PRO" | "ENTERPRISE"
 }) {
-  const validatedData = createTenantSchema.parse(data)
+  try {
+    const validatedData = createTenantSchema.parse(data)
 
-  // Check if tenant slug already exists
-  const existingTenant = await db.tenant.findUnique({
-    where: { slug: validatedData.slug },
-  })
+    // Check if tenant slug already exists
+    const existingTenant = await db.tenant.findUnique({
+      where: { slug: validatedData.slug },
+    })
 
-  if (existingTenant) {
-    throw new Error("Tenant with this slug already exists")
+    if (existingTenant) {
+      throw new Error("Tenant with this slug already exists")
+    }
+
+    // Use transaction to ensure data consistency
+    const result = await db.$transaction(async (tx) => {
+      // Create tenant first
+      const tenant = await tx.tenant.create({
+        data: {
+          name: validatedData.name,
+          slug: validatedData.slug,
+          plan: validatedData.plan || "FREE",
+          status: "ACTIVE",
+          maxUsers: 5,
+        },
+      })
+
+      // Create user membership as owner
+      const tenantUser = await tx.tenantUser.create({
+        data: {
+          userId: validatedData.userId,
+          tenantId: tenant.id,
+          role: "OWNER",
+          isActive: true,
+        },
+      })
+
+      return { tenant, tenantUser }
+    })
+
+    return result
+  } catch (error) {
+    console.error("Create tenant error:", error)
+    throw error
   }
-
-  // Use transaction to ensure data consistency
-  const result = await db.$transaction(async (tx) => {
-    // Create tenant first
-    const tenant = await tx.tenant.create({
-      data: {
-        name: validatedData.name,
-        slug: validatedData.slug,
-        plan: validatedData.plan || "FREE",
-        status: "ACTIVE",
-        maxUsers: 5,
-      },
-    })
-
-    // Create user membership as owner
-    const tenantUser = await tx.tenantUser.create({
-      data: {
-        userId: validatedData.userId,
-        tenantId: tenant.id,
-        role: "OWNER",
-        isActive: true,
-      },
-    })
-
-    return { tenant, tenantUser }
-  })
-
-  return result
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { bcryptjs } from "bcryptjs"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 const resetPasswordSchema = z.object({
@@ -24,22 +24,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For demo purposes, we need to find the user to update
-    // In a real implementation, you would find the user by the reset token
-    
-    // Since we don't have a proper token storage, we'll need to ask for email
-    // For demo, let's just return success (you'd implement proper token lookup)
-    
+    // Find user by reset token and check if token is not expired
+    const user = await db.user.findFirst({
+      where: {
+        resetToken: validatedData.token,
+        resetTokenExpires: {
+          gt: new Date(),
+        },
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "رمز إعادة التعيين غير صالح أو منتهي الصلاحية" },
+        { status: 400 }
+      )
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12)
+
+    // Update user password and clear reset token
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    })
+
     return NextResponse.json({
       message: "تم تعيين كلمة المرور الجديدة بنجاح",
-      // Note: In production, you would actually update the user's password here
     })
   } catch (error) {
     console.error("Reset password error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }

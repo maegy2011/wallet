@@ -59,10 +59,17 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error) {
     console.error("Profile update error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }

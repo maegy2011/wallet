@@ -167,10 +167,17 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Invite error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }

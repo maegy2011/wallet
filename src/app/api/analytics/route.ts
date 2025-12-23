@@ -6,7 +6,7 @@ import { db } from "@/lib/db"
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.id || !session?.user?.tenantId) {
       return NextResponse.json(
         { error: "غير مصرح بالوصول" },
@@ -15,12 +15,21 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const period = searchParams.get("period") || "30" // default to 30 days
+    const periodStr = searchParams.get("period") || "30" // default to 30 days
     const metric = searchParams.get("metric") || "all"
+
+    // Validate and parse period parameter
+    const period = parseInt(periodStr)
+    if (isNaN(period) || period < 1 || period > 365) {
+      return NextResponse.json(
+        { error: "الفترة يجب أن تكون بين 1 و 365 يوم" },
+        { status: 400 }
+      )
+    }
 
     const tenantId = session.user.tenantId
     const daysAgo = new Date()
-    daysAgo.setDate(daysAgo.getDate() - parseInt(period))
+    daysAgo.setDate(daysAgo.getDate() - period)
 
     // Get basic stats
     const [userCount, projectCount, taskCount] = await Promise.all([
@@ -158,6 +167,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(analyticsData)
   } catch (error) {
     console.error("Analytics error:", error)
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: "حدث خطأ غير متوقع أثناء جلب البيانات التحليلية" },
       { status: 500 }
@@ -168,7 +185,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.id || !session?.user?.tenantId) {
       return NextResponse.json(
         { error: "غير مصرح بالوصول" },
@@ -176,8 +193,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { metric, value, date } = await request.json()
+    const body = await request.json()
+    const { metric, value, date } = body
 
+    // Validate required fields
     if (!metric || value === undefined) {
       return NextResponse.json(
         { error: "بيانات غير مكتملة" },
@@ -185,13 +204,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate metric name
+    if (typeof metric !== 'string' || metric.trim().length === 0) {
+      return NextResponse.json(
+        { error: "المقياس غير صالح" },
+        { status: 400 }
+      )
+    }
+
+    // Validate value
+    const parsedValue = parseInt(value)
+    if (isNaN(parsedValue) || parsedValue < 0) {
+      return NextResponse.json(
+        { error: "القيمة غير صالحة" },
+        { status: 400 }
+      )
+    }
+
+    // Validate date if provided
+    let validDate = new Date()
+    if (date) {
+      validDate = new Date(date)
+      if (isNaN(validDate.getTime())) {
+        return NextResponse.json(
+          { error: "التاريخ غير صالح" },
+          { status: 400 }
+        )
+      }
+    }
+
     // Record usage stat
     const usageStat = await db.usageStats.create({
       data: {
         tenantId: session.user.tenantId,
         metric,
-        value: parseInt(value),
-        date: date ? new Date(date) : new Date(),
+        value: parsedValue,
+        date: validDate,
       },
     })
 
@@ -201,6 +249,14 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Record analytics error:", error)
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: "حدث خطأ غير متوقع أثناء تسجيل الإحصائية" },
       { status: 500 }

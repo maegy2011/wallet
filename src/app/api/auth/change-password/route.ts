@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { bcryptjs } from "bcryptjs"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 const changePasswordSchema = z.object({
@@ -65,10 +65,17 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error) {
     console.error("Change password error:", error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "بيانات غير صحيحة" },
         { status: 400 }
       )
     }
