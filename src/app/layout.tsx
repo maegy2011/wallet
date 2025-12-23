@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import Header from "@/components/header";
-import Footer from "@/components/footer";
-import { AuthProvider } from "@/contexts/auth-context";
+import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,17 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "محفظة ذكية | نظام إدارة المحافظ الإلكترونية",
-  description: "نظام متكامل لإدارة المحافظ الإلكترونية والمعاملات المالية للشركات والمؤسسات التجارية",
-  keywords: ["محافظ", "محفظة إلكترونية", "إدارة معاملات", "محفظة", "نظام مالي"],
-  authors: [{ name: "Smart Wallet Team" }],
+  title: "ساسaaS - منصة متعددة المستأجرين",
+  description: "منصة متكاملة لإدارة الأعمال المتعددة بأمان وكفاءة",
+  keywords: ["SaaS", "متعدد المستأجرين", "إدارة الأعمال", "سحابة"],
+  authors: [{ name: "فريق ساسaaS" }],
   icons: {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "محفظة ذكية | نظام إدارة المحافظ الإلكترونية",
-    description: "نظام متكامل لإدارة المحافظ الإلكترونية والمعاملات المالية للشركات والمؤسسات التجارية",
+    title: "ساسaaS - منصة متعددة المستأجرين",
+    description: "حل سحابي متطور لإدارة عدة مؤسسات وفريق عمل",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ساسaaS",
+    description: "منصة متكاملة لإدارة الأعمال المتعددة",
   },
 };
 
@@ -41,16 +44,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
+        <Providers>
+          {children}
           <Toaster />
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

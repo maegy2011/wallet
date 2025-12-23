@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Multi-tenant SaaS Application Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -13,338 +9,241 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id              String   @id @default(cuid())
-  username        String   @unique
-  email           String?  @unique
-  phone           String   @unique
-  nationalId      String   @unique
-  password        String
-  isActive        Boolean  @default(true)
-  isEmailVerified Boolean  @default(false)
-  isPhoneVerified Boolean  @default(false)
-  lastLoginAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+// Tenant (Organization) Model
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  domain      String?
+  plan        Plan     @default(FREE)
+  status      TenantStatus @default(ACTIVE)
+  maxUsers    Int      @default(5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  userBusinessAccounts UserBusinessAccount[]
-  userBranches         UserBranch[]
-  userRoles            UserRole[]
-  userSessions         UserSession[]
-  passwordResets       PasswordReset[]
-  
+  users       TenantUser[]
+  projects    Project[]
+  invitations Invitation[]
+  subscriptions Subscription[]
+  usageStats  UsageStats[]
+  sessions    Session[]
+
+  @@map("tenants")
+}
+
+// User Model
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Security Questions
+  securityQuestion1  String?
+  securityAnswer1   String?
+  securityQuestion2  String?
+  securityAnswer2   String?
+  securityQuestion3  String?
+  securityAnswer3   String?
+
+  // Relations
+  tenantUsers TenantUser[]
+  invitationsSent Invitation[] @relation("InvitationSent")
+  invitationsReceived Invitation[] @relation("InvitationReceived")
+  sessions    Session[]
+
   @@map("users")
 }
 
-model BusinessAccount {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  commercialId    String?  @unique
-  taxId           String?  @unique
-  address         String?
-  phone           String
-  email           String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+// Tenant-User Relationship (Membership)
+model TenantUser {
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      UserRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+  isActive  Boolean  @default(true)
+
   // Relations
-  branches        Branch[]
-  userBusinessAccounts UserBusinessAccount[]
-  userRoles       UserRole[]
-  subscription    Subscription?
-  wallets         Wallet[]
-  
-  @@map("business_accounts")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projects   Project[]
+  assigned   Task[]   @relation("TaskAssigned")
+  created    Task[]   @relation("TaskCreated")
+
+  @@unique([userId, tenantId])
+  @@map("tenant_users")
 }
 
-model Branch {
-  id              String   @id @default(cuid())
-  businessAccountId String
-  name            String
-  address         String?
-  phone           String?
-  email           String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+// Project Model (Tenant-scoped)
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  tenantId    String
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
   // Relations
-  businessAccount BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
-  userBranches    UserBranch[]
-  userRoles       UserRole[]
-  
-  @@map("branches")
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy TenantUser @relation(fields: [createdById], references: [id])
+  tasks     Task[]
+
+  @@map("projects")
 }
 
-model Role {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  description     String?
-  permissions     String   // JSON string of permissions
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+// Task Model (Project-scoped)
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  projectId   String
+  assignedId  String?
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
   // Relations
-  userRoles       UserRole[]
-  
-  @@map("roles")
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigned  TenantUser? @relation("TaskAssigned", fields: [assignedId], references: [id])
+  createdBy TenantUser @relation("TaskCreated", fields: [createdById], references: [id])
+
+  @@map("tasks")
 }
 
-model UserRole {
-  id              String   @id @default(cuid())
-  userId          String
-  roleId          String
-  businessAccountId String?
-  branchId        String?
-  isActive        Boolean  @default(true)
-  assignedAt      DateTime @default(now())
-  assignedBy      String?
-  
+// Invitation Model
+model Invitation {
+  id       String           @id @default(cuid())
+  email    String
+  role     UserRole         @default(MEMBER)
+  token    String           @unique
+  status   InvitationStatus @default(PENDING)
+  tenantId String
+  invitedById String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role            Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  businessAccount BusinessAccount? @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
-  branch          Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, roleId, businessAccountId, branchId])
-  @@map("user_roles")
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy  User   @relation("InvitationSent", fields: [invitedById], references: [id])
+  invitedUser User?  @relation("InvitationReceived", fields: [email], references: [email])
+
+  @@unique([email, tenantId])
+  @@map("invitations")
 }
 
-model UserBusinessAccount {
-  id              String   @id @default(cuid())
-  userId          String
-  businessAccountId String
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  
-  // Relations
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessAccount BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, businessAccountId])
-  @@map("user_business_accounts")
-}
-
-model UserBranch {
-  id              String   @id @default(cuid())
-  userId          String
-  branchId        String
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  
-  // Relations
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch          Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, branchId])
-  @@map("user_branches")
-}
-
-model UserSession {
-  id              String   @id @default(cuid())
-  userId          String
-  token           String   @unique
-  refreshToken    String?  @unique
-  ipAddress       String?
-  userAgent       String?
-  isActive        Boolean  @default(true)
-  expiresAt       DateTime
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("user_sessions")
-}
-
-model PasswordReset {
-  id              String   @id @default(cuid())
-  userId          String
-  token           String   @unique
-  isUsed          Boolean  @default(false)
-  expiresAt       DateTime
-  createdAt       DateTime @default(now())
-  
-  // Relations
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("password_resets")
-}
-
-model Wallet {
-  id              String   @id @default(cuid())
-  uuid            String   @unique @default(uuid())
-  name            String
-  mobileNumber    String   @unique
-  logo            String?
-  balance         Float    @default(0)
-  totalDeposits   Float    @default(0)
-  totalWithdrawals Float   @default(0)
-  monthlyTransactions Float @default(0)
-  monthlyLimit    Float    @default(200000) // Dynamic monthly limit per wallet
-  dailyLimit      Float    @default(60000) // Dynamic daily limit per wallet
-  minBalanceAlert Float    @default(1000) // Minimum balance alert threshold
-  feeType         String   @default("percentage") // 'percentage', 'perThousand', 'fixed'
-  feePercentage   Float    @default(0) // Percentage fee (e.g., 2.5 for 2.5%)
-  feePerThousand  Float    @default(0) // Fee amount per 1000 EGP (e.g., 5 for 5 EGP per 1000)
-  maxFeeAmount    Float    @default(0) // Maximum fee amount in Egyptian Pounds
-  minFeeAmount    Float    @default(0) // Minimum fee amount in Egyptian Pounds
-  totalFeesEarned Float    @default(0) // Total fees earned by merchant
-  isArchived      Boolean  @default(false) // Soft delete flag
-  archivedAt      DateTime? // Archive timestamp
-  businessAccountId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  businessAccount  BusinessAccount? @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
-  transactions    Transaction[]
-  expenses        Expense[]
-  transfersFrom   Transfer[] @relation("TransferFrom")
-  transfersTo     Transfer[] @relation("TransferTo")
-  reports         Report[]
-  
-  @@map("wallets")
-}
-
-model Transaction {
-  id                  String   @id @default(cuid())
-  walletId            String
-  type                String   // 'deposit', 'withdrawal', 'transfer'
-  amount              Float
-  feeAmount           Float    @default(0) // Fee charged for this transaction
-  description         String
-  date                DateTime @default(now())
-  createdAt           DateTime @default(now())
-  cashTreasuryCoverage Float  @default(0) // Amount covered by cash treasury (0 = full amount, >0 = partial coverage)
-  isFullyCovered      Boolean @default(true) // true = fully covered by cash treasury, false = partially covered
-  
-  wallet              Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
-}
-
-model Expense {
-  id              String   @id @default(cuid())
-  walletId        String
-  category        String   // 'rent', 'bills', 'food', 'personal', 'other'
-  amount          Float
-  description     String
-  date            DateTime @default(now())
-  createdAt       DateTime @default(now())
-  
-  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
-}
-
-model CashTreasury {
-  id              String   @id @default(cuid())
-  balance         Float    @default(0)
-  totalDeposits   Float    @default(0)
-  totalWithdrawals Float   @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  transactions    CashTreasuryTransaction[]
-  transfers       Transfer[]
-}
-
-model CashTreasuryTransaction {
-  id              String   @id @default(cuid())
-  type            String   // 'deposit', 'withdrawal', 'transfer_in', 'transfer_out'
-  amount          Float
-  description     String
-  referenceId     String?  // Reference to wallet ID for transfers
-  date            DateTime @default(now())
-  createdAt       DateTime @default(now())
-  
-  cashTreasury    CashTreasury @relation(fields: [cashTreasuryId], references: [id], onDelete: Cascade)
-  cashTreasuryId  String
-}
-
-model Transfer {
-  id              String   @id @default(cuid())
-  fromWalletId    String?
-  toWalletId      String?
-  fromCashTreasury Boolean @default(false)
-  toCashTreasury  Boolean @default(false)
-  amount          Float
-  description     String
-  date            DateTime @default(now())
-  createdAt       DateTime @default(now())
-  
-  fromWallet      Wallet?       @relation("TransferFrom", fields: [fromWalletId], references: [id], onDelete: Cascade)
-  toWallet        Wallet?       @relation("TransferTo", fields: [toWalletId], references: [id], onDelete: Cascade)
-  cashTreasury    CashTreasury  @relation(fields: [cashTreasuryId], references: [id], onDelete: Cascade)
-  cashTreasuryId  String
-}
-
-model Settings {
-  id              String   @id @default(cuid())
-  key             String   @unique
-  value           String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model Report {
-  id              String   @id @default(cuid())
-  walletId        String
-  type            String   // 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'
-  period          String   // JSON string containing period details (date, quarter, year, etc.)
-  data            String   // JSON string containing the report data
-  generatedAt     DateTime @default(now())
-  
-  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
-}
-
+// Subscription Model
 model Subscription {
-  id                String   @id @default(cuid())
-  businessAccountId String   @unique
-  plan              String   // 'basic', 'premium', 'enterprise'
-  status            String   // 'active', 'inactive', 'cancelled', 'expired'
-  startDate         DateTime @default(now())
-  endDate           DateTime?
-  monthlyPrice      Float    @default(50)
-  maxWallets        Int      @default(10)
-  maxBranches       Int      @default(5)
-  maxUsers          Int      @default(20)
-  autoRenew         Boolean  @default(true)
-  paymentMethod     String?  // 'card', 'bank_transfer', 'cash'
-  lastPaymentAt     DateTime?
-  nextBillingDate   DateTime?
-  cancelledAt       DateTime?
-  cancellationReason String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id          String          @id @default(cuid())
+  tenantId    String
+  plan        Plan
+  status      SubscriptionStatus @default(ACTIVE)
+  startDate   DateTime
+  endDate     DateTime?
+  amount      Float?
+  currency    String          @default("USD")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
   // Relations
-  businessAccount   BusinessAccount @relation(fields: [businessAccountId], references: [id], onDelete: Cascade)
-  payments          Payment[]
-  
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@map("subscriptions")
 }
 
-model Payment {
-  id                String   @id @default(cuid())
-  subscriptionId    String
-  amount            Float
-  currency          String   @default("EGP")
-  paymentMethod     String   // 'card', 'bank_transfer', 'cash'
-  status            String   // 'pending', 'completed', 'failed', 'refunded'
-  transactionId     String?  // External payment gateway transaction ID
-  paymentDate       DateTime @default(now())
-  dueDate           DateTime
-  paidAt            DateTime?
-  failureReason     String?
-  refundedAt        DateTime?
-  refundReason      String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+// Usage Statistics Model
+model UsageStats {
+  id        String   @id @default(cuid())
+  tenantId  String
+  metric    String
+  value     Int
+  date      DateTime
+  createdAt DateTime @default(now())
+
   // Relations
-  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
-  @@map("payments")
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, metric, date])
+  @@map("usage_stats")
+}
+
+// Session Model for NextAuth
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  tenantId     String?
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@map("sessions")
+}
+
+// Enums
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
 }

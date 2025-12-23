@@ -1,284 +1,180 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useAuth } from '@/contexts/auth-context'
-import { 
-  Wallet, 
-  TrendingUp, 
-  Shield, 
-  Users, 
-  Smartphone, 
-  BarChart3,
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
-  Phone,
-  Mail,
-  MapPin,
-  Star,
-  Zap,
-  Lock,
-  RefreshCw,
-  Eye,
-  Building,
-  Store,
-  CreditCard,
-  FileText,
-  PiggyBank,
-  AlertCircle,
-  Home
-} from 'lucide-react'
-import ProtectedEmail from '@/components/protected-email'
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Check, Star, Users, Shield, Zap, ArrowLeft, ArrowRight } from "lucide-react"
+import Link from "next/link"
+
+const pricingPlans = [
+  {
+    name: "مجاني",
+    description: "مثالي للمشاريع الصغيرة والفرق المبتدئة",
+    price: "0",
+    features: [
+      "5 مستخدمين كحد أقصى",
+      "3 مشاريع",
+      "100 مهمة شهرياً",
+      "تحليلات أساسية",
+      "دعم عبر البريد الإلكتروني",
+    ],
+    notIncluded: [
+      "دعم فوري",
+      "تكامل متقدم",
+      "واجهة برمجة التطبيقات",
+      "تصدير البيانات",
+    ],
+    color: "border-gray-200",
+    popular: false,
+  },
+  {
+    name: "احترافي",
+    description: "مثالي للشركات المتنامية والفرق المتوسطة",
+    price: "29",
+    features: [
+      "25 مستخدم كحد أقصى",
+      "مشاريع غير محدودة",
+      "مهام غير محدودة",
+      "تحليلات متقدمة",
+      "دعم فوري عبر الدردشة",
+      "تكامل مع أدوات أخرى",
+      "واجهة برمجة التطبيقات",
+      "تصدير البيانات",
+    ],
+    notIncluded: [
+      "مدير حساب مخصص",
+      "تدريب مخصص",
+    ],
+    color: "border-blue-200",
+    popular: true,
+  },
+  {
+    name: "مؤسسي",
+    description: "مثالي للمؤسسات الكبيرة والمشاريع المعقدة",
+    price: "99",
+    features: [
+      "مستخدمون غير محدودون",
+      "مشاريع غير محدودة",
+      "مهام غير محدودة",
+      "تحليلات متقدمة مع تقارير مخصصة",
+      "دعم فوري على مدار الساعة",
+      "تكامل متقدم مع أدوات أخرى",
+      "واجهة برمجة التطبيقات المتقدمة",
+      "تصدير البيانات المتقدم",
+      "مدير حساب مخصص",
+      "تدريب مخصص للفريق",
+      "ضمان وقت تشغيل 99.9%",
+    ],
+    notIncluded: [],
+    color: "border-purple-200",
+    popular: false,
+  },
+]
+
+const features = [
+  {
+    icon: Users,
+    title: "إدارة متعددة المستأجرين",
+    description: "نظام متكامل لإدارة عدة مؤسسات وفروع بسهولة وأمان",
+  },
+  {
+    icon: Shield,
+    title: "أمان متقدم",
+    description: "تشفير البيانات، صلاحيات متقدمة، وعزل كامل بين المستأجرين",
+  },
+  {
+    icon: Zap,
+    title: "أداء عالي",
+    description: "بنية تحتية حديثة تضمن سرعة واستجابة ممتازة",
+  },
+]
 
 export default function LandingPage() {
-  const { isAuthenticated, user } = useAuth()
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  })
-  const [captchaAnswer, setCaptchaAnswer] = useState('')
-  const [captchaQuestion, setCaptchaQuestion] = useState('')
-  const [expectedAnswer, setExpectedAnswer] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitMessage, setSubmitMessage] = useState('')
-  const [isClient, setIsClient] = useState(false)
-
-  // Generate simple captcha - only on client side
-  useEffect(() => {
-    setIsClient(true)
-    const num1 = Math.floor(Math.random() * 10) + 1
-    const num2 = Math.floor(Math.random() * 10) + 1
-    setCaptchaQuestion(`${num1} + ${num2} = ?`)
-    setExpectedAnswer(num1 + num2)
-  }, [])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Simple captcha validation
-    if (parseInt(captchaAnswer) !== expectedAnswer) {
-      setSubmitMessage('الإجابة على السؤال التأكيدي غير صحيحة')
-      return
-    }
-
-    setIsSubmitting(true)
-    setSubmitMessage('')
-
-    try {
-      // Here you would normally send the form data to your backend
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-      
-      setSubmitMessage('تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.')
-      setFormData({ name: '', email: '', phone: '', message: '' })
-      setCaptchaAnswer('')
-      // Generate new captcha after successful submission
-      const num1 = Math.floor(Math.random() * 10) + 1
-      const num2 = Math.floor(Math.random() * 10) + 1
-      setCaptchaQuestion(`${num1} + ${num2} = ?`)
-      setExpectedAnswer(num1 + num2)
-    } catch (error) {
-      setSubmitMessage('حدث خطأ أثناء إرسال الرسالة. يرجى المحاولة مرة أخرى.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const features = [
-    {
-      icon: Wallet,
-      title: 'إدارة المحافظ',
-      description: 'إنشاء وإدارة عدد غير محدود من المحافظ الإلكترونية لمنشأتك'
-    },
-    {
-      icon: Building,
-      title: 'إدارة متعددة الفروع',
-      description: 'إدارة فروع متعددة بسهولة تامة مع تحكم كامل في الصلاحيات'
-    },
-    {
-      icon: BarChart3,
-      title: 'تقارير مفصلة',
-      description: 'تقارير مالية شاملة يومية، أسبوعية، شهرية وسنوية'
-    },
-    {
-      icon: Shield,
-      title: 'أمان متقدم',
-      description: 'تشفير البيانات وحماية كاملة لجميع المعاملات المالية'
-    },
-    {
-      icon: Smartphone,
-      title: 'واجهة محمولة',
-      description: 'تصميم متجاوب يعمل على جميع الأجهزة المحمولة والحواسيب'
-    },
-    {
-      icon: Zap,
-      title: 'سرعة فائقة',
-      description: 'معالجة فورية للمعاملات وتحديثات لحظية للرصيد'
-    },
-    {
-      icon: Users,
-      title: 'إدارة المستخدمين',
-      description: 'تحكم كامل في صلاحيات المستخدمين والفرق العمل'
-    },
-    {
-      icon: CreditCard,
-      title: 'رسوم مرنة',
-      description: 'نظام رسوم متعدد الخيارات يناسب احتياجات عملك'
-    },
-    {
-      icon: PiggyBank,
-      title: 'خزينة نقدية',
-      description: 'إدارة الخزينة النقدية وتتبع التدفقات المالية'
-    }
-  ]
-
-  const stats = [
-    { label: 'منشأة', value: '500+' },
-    { label: 'فرع', value: '1000+' },
-    { label: 'معاملة شهرية', value: '50,000+' },
-    { label: 'دولة', value: '10+' }
-  ]
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
 
   return (
-    <div className="min-h-screen">
-      {/* Quick Navigation for Authenticated Users */}
-      {isAuthenticated && (
-        <div className="bg-emerald-600 text-white py-3 px-4">
-          <div className="container mx-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">مرحباً بك، {user?.name}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/summary" 
-                  className="flex items-center gap-2 bg-white text-emerald-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  التقارير
-                </Link>
-                <Link 
-                  href="/profile" 
-                  className="flex items-center gap-2 bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 transition-colors"
-                >
-                  الملف الشخصي
-                </Link>
-              </div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white" dir="rtl">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold">س</span>
             </div>
+            <span className="text-xl font-bold text-gray-900">ساسaaS</span>
+          </div>
+          <nav className="hidden md:flex items-center space-x-6 space-x-reverse">
+            <a href="#features" className="text-gray-600 hover:text-gray-900 transition">
+              المميزات
+            </a>
+            <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition">
+              الأسعار
+            </a>
+            <a href="#contact" className="text-gray-600 hover:text-gray-900 transition">
+              اتصل بنا
+            </a>
+          </nav>
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <Button variant="ghost" asChild>
+              <Link href="/auth/signin">تسجيل الدخول</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/auth/signup">ابدأ مجاناً</Link>
+            </Button>
           </div>
         </div>
-      )}
-      
-      {/* Hero Section */}
-      <section id="home" className="bg-gradient-to-br from-emerald-50 to-teal-50 py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto">
-            {isAuthenticated ? (
-              <>
-                <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-                  أهلاً بعودتك،
-                  <span className="text-emerald-600"> {user?.name}</span>
-                </h1>
-                <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  استمر في إدارة أعمالك بكفاءة. استخدم الأزرار بالأعلى للوصول السريع إلى التقارير والملف الشخصي.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/summary">
-                    <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8 py-3">
-                      عرض التقارير
-                      <BarChart3 className="mr-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link href="/profile">
-                    <Button size="lg" variant="outline" className="text-lg px-8 py-3 border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                      الملف الشخصي
-                    </Button>
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <>
-                <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-                  نظام متكامل لإدارة
-                  <span className="text-emerald-600"> المحافظ الإلكترونية</span>
-                </h1>
-                <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  حل ذكي وشامل لإدارة المعاملات المالية لمنشأتك. تحكم كامل في المحافظ، الفروع، والمستخدمين 
-                  مع تقارير مفصلة ورسوم مرنة.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/auth/register">
-                    <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8 py-3">
-                      ابدأ مجاناً
-                      <ArrowLeft className="mr-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link href="#features">
-                    <Button size="lg" variant="outline" className="text-lg px-8 py-3 border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                      تعرف على المميزات
-                    </Button>
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
+      </header>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-emerald-600 mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-gray-600">{stat.label}</div>
-              </div>
-            ))}
+      {/* Hero Section */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto text-center">
+          <Badge className="mb-4 bg-blue-100 text-blue-800 border-blue-200">
+            🚀 أحدث منصة SaaS متعددة المستأجرين
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            منصة متكاملة لإدارة
+            <span className="text-blue-600"> أعمالك المتعددة</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            حل سحابي متطور يتيح لك إدارة عدة مؤسسات وفريق عمل من لوحة تحكم واحدة، مع أمان متقدم ومرونة لا مثيل لها
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="text-lg px-8 py-6" asChild>
+              <Link href="/auth/signup">
+                ابدأ مجاناً
+                <ArrowLeft className="mr-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
+              <Link href="#demo">شاهد عرضاً توضيحياً</Link>
+            </Button>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-20 px-4 bg-gray-50">
+        <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              مميزات نظام المحفظة الذكية
+              مميزات تجعلنا مختلفين
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              نظام شامل يوفر جميع الأدوات التي تحتاجها لإدارة أعمالك المالية بكفاءة وأمان
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              نقدم أفضل المميزات التي تحتاجها لإدارة أعمالك بكفاءة وأمان
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow border-0 shadow-sm">
+              <Card key={index} className="text-center border-0 shadow-lg">
                 <CardHeader>
-                  <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-emerald-600" />
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <feature.icon className="h-8 w-8 text-blue-600" />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                  <p className="text-gray-600">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -287,211 +183,155 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="pricing" className="py-20 px-4">
+        <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              خطة أسعار بسيطة وشفافة
+              خطط أسعار تناسب الجميع
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              سعر واحد يناسب جميع احتياجاتك بدون تعقيدات أو رسوم خفية
+            <p className="text-xl text-gray-600 mb-8">
+              اختر الخطة التي تناسب حجم عملك واحتياجاتك
             </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto">
-            <Card className="border-2 border-emerald-600 shadow-xl">
-              <CardHeader className="text-center pb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
-                  <Star className="h-8 w-8 text-emerald-600" />
-                </div>
-                <CardTitle className="text-2xl font-bold">الخطة الكاملة</CardTitle>
-                <CardDescription className="text-lg">كل ما تحتاجه لإدارة أعمالك</CardDescription>
-                <div className="mt-6">
-                  <div className="text-5xl font-bold text-emerald-600">
-                    50 جنيه
-                  </div>
-                  <div className="text-gray-600 text-lg mt-2">شهرياً فقط</div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">منشأة واحدة فقط</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">عدد غير محدود من الفروع</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">عدد غير محدود من المعاملات</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">بدون نسبة من إجمالي المعاملات</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">جميع المميزات متاحة</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 ml-3" />
-                    <span className="text-gray-700">دعم فني متخصص</span>
-                  </div>
-                </div>
-                <Link href="/auth/register">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg py-3">
-                    ابدأ الآن
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              تواصل معنا
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              نحن هنا لمساعدتك. تواصل معنا لأي استفسارات أو اقتراحات
-            </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Contact Info */}
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-xl font-semibold mb-6">معلومات التواصل</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Phone className="h-5 w-5 text-emerald-600 ml-3" />
-                      <span className="text-gray-700" dir="ltr">+20 123 456 7890</span>
-                    </div>
-                    <div className="flex items-center">
-                      <ProtectedEmail 
-                        email="info@smartwallet.com"
-                        className="text-gray-700 flex items-center gap-3"
-                      />
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="h-5 w-5 text-emerald-600 ml-3" />
-                      <span className="text-gray-700">القاهرة، مصر</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-xl font-semibold mb-4">ساعات العمل</h3>
-                  <div className="text-gray-700">
-                    <p>الأحد - الخميس: 9:00 ص - 6:00 م</p>
-                    <p>الجمعة - السبت: 10:00 ص - 4:00 م</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>أرسل لنا رسالة</CardTitle>
-                  <CardDescription>
-                    سنرد على رسالتك في أقرب وقت ممكن
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">الاسم *</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">الهاتف *</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          required
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="email">البريد الإلكتروني</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="message">الرسالة *</Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        required
-                        rows={4}
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="captcha">
-                        سؤال تأكيدي: <span className="inline-block min-h-[1.5rem]">{isClient ? captchaQuestion : '\u00A0'}</span> *
-                      </Label>
-                      <Input
-                        id="captcha"
-                        value={captchaAnswer}
-                        onChange={(e) => setCaptchaAnswer(e.target.value)}
-                        required
-                        className="mt-1"
-                        placeholder="أدخل الإجابة"
-                      />
-                    </div>
-                    
-                    {submitMessage && (
-                      <Alert className={submitMessage.includes('نجاح') ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{submitMessage}</AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {isSubmitting ? 'جاري الإرسال...' : 'إرسال الرسالة'}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+            <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={billingCycle === "monthly" ? "default" : "ghost"}
+                onClick={() => setBillingCycle("monthly")}
+                className="px-6"
+              >
+                شهري
+              </Button>
+              <Button
+                variant={billingCycle === "yearly" ? "default" : "ghost"}
+                onClick={() => setBillingCycle("yearly")}
+                className="px-6"
+              >
+                سنوي (وفر 20%)
+              </Button>
             </div>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {pricingPlans.map((plan, index) => (
+              <Card
+                key={index}
+                className={`relative ${plan.color} ${
+                  plan.popular ? "ring-2 ring-blue-500 shadow-xl" : "shadow-lg"
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-blue-600 text-white px-4 py-1">
+                      <Star className="w-4 h-4 ml-1" />
+                      الأكثر شعبية
+                    </Badge>
+                  </div>
+                )}
+                <CardHeader className="text-center pb-8">
+                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    {plan.description}
+                  </CardDescription>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold">
+                      ${plan.price}
+                    </span>
+                    <span className="text-gray-600">/شهرياً</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {plan.features.map((feature, featureIndex) => (
+                    <div key={featureIndex} className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 ml-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700">{feature}</span>
+                    </div>
+                  ))}
+                  {plan.notIncluded.map((feature, featureIndex) => (
+                    <div key={featureIndex} className="flex items-start opacity-50">
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full ml-2 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-500">{feature}</span>
+                    </div>
+                  ))}
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    className="w-full"
+                    variant={plan.popular ? "default" : "outline"}
+                    asChild
+                  >
+                    <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}`}>
+                      {plan.name === "مجاني" ? "ابدأ مجاناً" : "اختر الخطة"}
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-blue-600">
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            هل أنت مستعد للبدء؟
+          </h2>
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            انضم إلى آلاف الشركات التي تثق في منصتنا لإدارة أعمالها
+          </p>
+          <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
+            <Link href="/auth/signup">
+              ابدأ تجربتك المجانية اليوم
+              <ArrowLeft className="mr-2 h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-300 py-12 px-4">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 space-x-reverse mb-4">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold">س</span>
+                </div>
+                <span className="text-xl font-bold text-white">ساسaaS</span>
+              </div>
+              <p className="text-gray-400">
+                منصة متكاملة لإدارة الأعمال المتعددة بأمان وكفاءة
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">المنتج</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="hover:text-white transition">المميزات</a></li>
+                <li><a href="#" className="hover:text-white transition">الأسعار</a></li>
+                <li><a href="#" className="hover:text-white transition">الشركاء</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">الدعم</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="hover:text-white transition">مركز المساعدة</a></li>
+                <li><a href="#" className="hover:text-white transition">التوثيق</a></li>
+                <li><a href="#" className="hover:text-white transition">اتصل بنا</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">الشركة</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="hover:text-white transition">من نحن</a></li>
+                <li><a href="#" className="hover:text-white transition">المدونة</a></li>
+                <li><a href="#" className="hover:text-white transition">الوظائف</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+            <p>&copy; 2024 ساسaaS. جميع الحقوق محفوظة.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

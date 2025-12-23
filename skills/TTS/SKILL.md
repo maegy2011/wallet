@@ -22,6 +22,49 @@ Text-to-Speech allows you to build applications that generate spoken audio from 
 
 **IMPORTANT**: z-ai-web-dev-sdk MUST be used in backend code only. Never use it in client-side code.
 
+## API Limitations and Constraints
+
+Before implementing TTS functionality, be aware of these important limitations:
+
+### Input Text Constraints
+- **Maximum length**: 1024 characters per request
+- Text exceeding this limit must be split into smaller chunks
+
+### Audio Parameters
+- **Speed range**: 0.5 to 2.0
+  - 0.5 = half speed (slower)
+  - 1.0 = normal speed (default)
+  - 2.0 = double speed (faster)
+- **Volume range**: Greater than 0, up to 10
+  - Default: 1.0
+  - Values must be greater than 0 (exclusive) and up to 10 (inclusive)
+
+### Format and Streaming
+- **Streaming limitation**: When `stream: true` is enabled, only `pcm` format is supported
+- **Non-streaming**: Supports `wav`, `pcm`, and `mp3` formats
+- **Sample rate**: 24000 Hz (recommended)
+
+### Best Practice for Long Text
+```javascript
+function splitTextIntoChunks(text, maxLength = 1000) {
+  const chunks = [];
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  
+  let currentChunk = '';
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length <= maxLength) {
+      currentChunk += sentence;
+    } else {
+      if (currentChunk) chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk.trim());
+  
+  return chunks;
+}
+```
+
 ## Prerequisites
 
 The z-ai-web-dev-sdk package is already installed. Import it as shown in the examples below.
@@ -75,12 +118,12 @@ z-ai tts -i "This is a longer text that will be streamed" -o ./stream.wav --stre
 
 ### CLI Parameters
 
-- `--input, -i <text>`: **Required** - Text to convert to speech
+- `--input, -i <text>`: **Required** - Text to convert to speech (max 1024 characters)
 - `--output, -o <path>`: **Required** - Output audio file path
 - `--voice, -v <voice>`: Optional - Voice type (default: tongtong)
 - `--speed, -s <number>`: Optional - Speech speed, 0.5-2.0 (default: 1.0)
 - `--format, -f <format>`: Optional - Output format: wav, mp3, pcm (default: wav)
-- `--stream`: Optional - Enable streaming output
+- `--stream`: Optional - Enable streaming output (only supports pcm format)
 
 ### When to Use CLI vs SDK
 
@@ -166,10 +209,11 @@ import fs from 'fs';
 async function generateWithSpeed(text, speed, outputPath) {
   const zai = await ZAI.create();
 
-  // Speed range: typically 0.5 to 2.0
+  // Speed range: 0.5 to 2.0 (API constraint)
   // 0.5 = half speed (slower)
-  // 1.0 = normal speed
+  // 1.0 = normal speed (default)
   // 2.0 = double speed (faster)
+  // Values outside this range will cause API errors
 
   const response = await zai.audio.tts.create({
     input: text,
@@ -192,6 +236,43 @@ await generateWithSpeed('This is an important announcement', 0.8, './slow.wav');
 
 // Usage - faster narration
 await generateWithSpeed('Quick update', 1.3, './fast.wav');
+```
+
+### Adjustable Volume
+
+```javascript
+import ZAI from 'z-ai-web-dev-sdk';
+import fs from 'fs';
+
+async function generateWithVolume(text, volume, outputPath) {
+  const zai = await ZAI.create();
+
+  // Volume range: greater than 0, up to 10 (API constraint)
+  // Values must be > 0 (exclusive) and <= 10 (inclusive)
+  // Default: 1.0 (normal volume)
+
+  const response = await zai.audio.tts.create({
+    input: text,
+    voice: 'tongtong',
+    speed: 1.0,
+    volume: volume, // Optional parameter
+    response_format: 'wav',
+    stream: false
+  });
+
+  // Get array buffer from Response object
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+
+  fs.writeFileSync(outputPath, buffer);
+  return outputPath;
+}
+
+// Usage - louder audio
+await generateWithVolume('This is an announcement', 5.0, './loud.wav');
+
+// Usage - quieter audio
+await generateWithVolume('Whispered message', 0.5, './quiet.wav');
 ```
 
 ## Advanced Use Cases
@@ -395,8 +476,13 @@ import fs from 'fs';
 
 async function safeTTS(text, outputPath) {
   try {
+    // Validate input
     if (!text || text.trim().length === 0) {
       throw new Error('Text input cannot be empty');
+    }
+
+    if (text.length > 1024) {
+      throw new Error('Text input exceeds maximum length of 1024 characters');
     }
 
     const zai = await ZAI.create();
@@ -529,6 +615,18 @@ initZAI().then(() => {
 
 ## Troubleshooting
 
+**Issue**: "Input text exceeds maximum length"
+- **Solution**: Text input is limited to 1024 characters. Split longer text into chunks using the `splitTextIntoChunks` function shown in the API Limitations section
+
+**Issue**: "Invalid speed parameter" or unexpected speed behavior
+- **Solution**: Speed must be between 0.5 and 2.0. Check your speed value is within this range
+
+**Issue**: "Invalid volume parameter"
+- **Solution**: Volume must be greater than 0 and up to 10. Ensure volume value is in range (0, 10]
+
+**Issue**: "Stream format not supported" with WAV/MP3
+- **Solution**: Streaming mode only supports PCM format. Either use `response_format: 'pcm'` with streaming, or disable streaming (`stream: false`) for WAV/MP3 output
+
 **Issue**: "SDK must be used in backend"
 - **Solution**: Ensure z-ai-web-dev-sdk is only imported in server-side code
 
@@ -556,6 +654,30 @@ initZAI().then(() => {
 5. **Async Processing**: Use queues for handling multiple requests
 
 ## Important Notes
+
+### API Constraints
+
+**Input Text Length**: Maximum 1024 characters per request. For longer text:
+```javascript
+// Split long text into chunks
+const longText = "..."; // Your long text here
+const chunks = splitTextIntoChunks(longText, 1000);
+
+for (const chunk of chunks) {
+  const response = await zai.audio.tts.create({
+    input: chunk,
+    voice: 'tongtong',
+    speed: 1.0,
+    response_format: 'wav',
+    stream: false
+  });
+  // Process each chunk...
+}
+```
+
+**Streaming Format Limitation**: When using `stream: true`, only `pcm` format is supported. For `wav` or `mp3` output, use `stream: false`.
+
+**Sample Rate**: Audio is generated at 24000 Hz sample rate (recommended setting for playback).
 
 ### Response Object Format
 
@@ -588,9 +710,23 @@ const buffer = Buffer.from(response.audio); // response.audio is undefined
 - Default: `1.0` (normal speed)
 - Maximum: `2.0` (double speed)
 
+**Important**: Speed values outside the range [0.5, 2.0] will result in API errors.
+
+### Volume Range
+
+- Minimum: Greater than `0` (exclusive)
+- Default: `1.0` (normal volume)
+- Maximum: `10` (inclusive)
+
+**Note**: Volume parameter is optional. When not specified, defaults to 1.0.
+
 ## Remember
 
 - Always use z-ai-web-dev-sdk in backend code only
+- **Input text is limited to 1024 characters maximum** - split longer text into chunks
+- **Speed must be between 0.5 and 2.0** - values outside this range will cause errors
+- **Volume must be greater than 0 and up to 10** - optional parameter with default 1.0
+- **Streaming only supports PCM format** - use non-streaming for WAV or MP3 output
 - The SDK returns a standard Response object - use `await response.arrayBuffer()`
 - Convert ArrayBuffer to Buffer using `Buffer.from(new Uint8Array(arrayBuffer))`
 - Handle audio buffers properly when saving to files
