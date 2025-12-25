@@ -1,0 +1,160 @@
+          <TabsContent value="system" className="space-y-6">
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-blue-400" />
+                  صحة النظام
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-slate-700/50 border border-slate-600">
+                    <div className="flex items-center gap-3">
+                      {health?.healthChecks.database.status === 'healthy' ? (
+                        <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                      ) : (
+                        <XCircle className="h-8 w-8 text-red-400" />
+                      )}
+                      <div>
+                        <p className="font-medium text-white text-lg">قاعدة البيانات</p>
+                        <p className="text-sm text-slate-400">
+                          {health?.healthChecks.database.status === 'healthy' ? 'متصلة وعاملة' : 'غير متصلة'}
+                        </p>
+                        {health?.healthChecks.database.error && (
+                          <p className="text-xs text-red-400 mt-1">{health.healthChecks.database.error}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant={health?.healthChecks.database.status === 'healthy' ? 'default' : 'destructive'}>
+                      {health?.healthChecks.database.status === 'healthy' ? 'سليمة' : 'مشكلة'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="p-4 rounded-lg bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">استجابة النظام</p>
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-blue-400" />
+                        <p className="text-2xl font-bold text-white">
+                          {health?.responseTime || 0}ms
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        {health?.responseTime < 100 ? 'سريع' : health?.responseTime < 500 ? 'جيد' : 'بطيء'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">وقت التشغيل</p>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-blue-400" />
+                        <p className="text-lg font-bold text-white">
+                          {health ? formatUptime(health.uptime) : '-'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">الحالة العامة</p>
+                      <Badge variant={health?.status === 'ok' ? 'default' : 'destructive'}>
+                        {health?.status === 'ok' ? 'سليم' : 'مشكلة'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Server className="h-5 w-5 text-blue-400" />
+                  معلومات السيرفر
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">إصدار Node.js</p>
+                      <p className="text-lg font-semibold text-white">
+                        {stats?.system.nodeVersion || '-'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">النظام الأساسي</p>
+                      <p className="text-lg font-semibold text-white">
+                        {stats?.system.platform || '-'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">المعمارية</p>
+                      <p className="text-lg font-semibold text-white">
+                        {stats?.system.arch || '-'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">البيئة</p>
+                      <Badge variant={stats?.system.environment === 'production' ? 'default' : 'secondary'}>
+                        {stats?.system.environment}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-2">استخدام الذاكرة</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">مستخدم</span>
+                          <span className="text-white">{health?.system.memory.used}MB</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">مخصص</span>
+                          <span className="text-white">{health?.system.memory.total}MB</span>
+                        </div>
+                        <div className="h-2 bg-slate-700 rounded-full overflow-hidden mt-2">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{ 
+                              width: `${((health?.system.memory.used || 0) / (health?.system.memory.total || 1)) * 100}%` 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">آخر تحديث للإحصائيات</p>
+                      <p className="text-sm text-slate-300">
+                        {stats?.timestamp ? formatDate(stats.timestamp) : '-'}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">إصدار النظام</p>
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-blue-400" />
+                        <p className="text-lg font-semibold text-white">{stats?.system.version}</p>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded bg-slate-700/50">
+                      <p className="text-sm text-slate-400 mb-1">اسم النظام</p>
+                      <div className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-blue-400" />
+                        <p className="text-lg font-semibold text-white">{stats?.system.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      <footer className="mt-auto border-t border-slate-700 bg-slate-900/95 backdrop-blur">
+        <div className="container flex h-12 items-center justify-center px-4">
+          <p className="text-sm text-slate-400">
+            © 2024 محافظي SaaS - لوحة تحكم المطور | {stats?.counts.tenants || 0} مستأجر
+          </p>
+        </div>
+      </footer>
+    </div>
+  )
+}

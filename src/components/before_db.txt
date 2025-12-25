@@ -1,0 +1,135 @@
+                                    {tenant.companies.length} شركة
+                                  </Badge>
+                                </div>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                  {tenant.companies.map((company) => (
+                                    <div key={company.id} className="p-3 rounded bg-slate-700/50">
+                                      <div className="flex items-center gap-2">
+                                        <Building2 className="h-4 w-4 text-slate-400" />
+                                        <span className="text-white">{company.name}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {tenant.companies.length === 0 && (
+                                    <p className="text-sm text-slate-500">لا يوجد شركات</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Wallets */}
+                              <div className="p-4 rounded-lg bg-slate-800">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Wallet className="h-5 w-5 text-purple-400" />
+                                  <h4 className="text-white font-semibold">المحافظ</h4>
+                                  <Badge variant="outline" className="ml-auto">
+                                    {tenant.wallets.length} محفظة
+                                  </Badge>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                  {tenant.wallets.map((wallet) => (
+                                    <div key={wallet.id} className="p-3 rounded bg-slate-700/50">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className="h-8 w-8 rounded bg-purple-500/20 flex items-center justify-center">
+                                          <Wallet className="h-4 w-4 text-purple-400" />
+                                        </div>
+                                        <span className="text-sm font-medium text-white">{wallet.name}</span>
+                                      </div>
+                                      <div className="text-lg font-bold text-white">
+                                        {formatCurrency(wallet.balance)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {tenant.wallets.length === 0 && (
+                                    <p className="text-sm text-slate-500">لا يوجد محافظ</p>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          )}
+                        </Card>
+                      )
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Change Plan Dialog */}
+          <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-white flex items-center gap-2">
+                  <Edit3 className="h-5 w-5 text-blue-400" />
+                  تغيير خطة الاشتراك
+                </DialogTitle>
+                {selectedTenant && (
+                  <DialogDescription className="text-slate-400">
+                    قم بتغيير خطة الاشتراك للمستأجر: <strong>{selectedTenant.name}</strong>
+                    <br />
+                    من <Badge variant={selectedTenant.plan === 'MERCHANT' ? 'default' : 'secondary'}>
+                      {selectedTenant.plan === 'MERCHANT' ? 'التاجر' : 'مجاني'}
+                    </Badge>
+                    إلى <Badge variant={selectedPlan === 'MERCHANT' ? 'default' : 'secondary'}>
+                      {selectedPlan === 'MERCHANT' ? 'التاجر' : 'مجاني'}
+                    </Badge>
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-plan">الخطة الحالية</Label>
+                  <div id="current-plan" className="p-3 rounded bg-slate-700">
+                    <Badge variant={selectedTenant?.plan === 'MERCHANT' ? 'default' : 'secondary'}>
+                      {selectedTenant?.plan === 'MERCHANT' ? 'التاجر' : 'مجاني'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-plan">الخطة الجديدة</Label>
+                  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                    <SelectTrigger id="new-plan">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FREE">مجاني</SelectItem>
+                      <SelectItem value="MERCHANT">التاجر</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>تفاصيل الخطة</Label>
+                  {selectedPlan === 'FREE' ? (
+                    <div className="p-4 rounded bg-slate-700 space-y-2">
+                      <p className="text-sm text-slate-300">✅ 2 محفظة إلكترونية</p>
+                      <p className="text-sm text-slate-300">✅ الوظائف الأساسية</p>
+                      <p className="text-sm text-slate-300">❌ محافظ غير محدودة</p>
+                      <p className="text-sm text-slate-300">❌ المميزات المتقدمة</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded bg-slate-700 space-y-2">
+                      <p className="text-sm text-slate-300">✅ محافظ غير محدودة</p>
+                      <p className="text-sm text-slate-300">✅ جميع الوظائف الأساسية</p>
+                      <p className="text-sm text-slate-300">✅ الوظائف المتقدمة</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setPlanDialogOpen(false)}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={handleChangeTenantPlan}
+                  disabled={selectedTenant?.plan === selectedPlan}
+                >
+                  <Edit3 className="h-4 w-4 ml-2" />
+                  تغيير الخطة
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
