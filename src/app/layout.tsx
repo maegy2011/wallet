@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Providers } from "@/components/providers";
+import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/components/auth/auth-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,22 +16,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ساسaaS - منصة متعددة المستأجرين",
-  description: "منصة متكاملة لإدارة الأعمال المتعددة بأمان وكفاءة",
-  keywords: ["SaaS", "متعدد المستأجرين", "إدارة الأعمال", "سحابة"],
-  authors: [{ name: "فريق ساسaaS" }],
-  icons: {
-    icon: "/logo.svg",
-  },
+  title: "فينتك - تطبيقك المالي الموثوق",
+  description: "تطبيق مالي متقدم يسهل إدارة أمورك المالية بكل أمان وسرعة",
+  keywords: ["فينتك", "تطبيق مالي", "موبايل", "مصر", "دفعات", "محفظة إلكترونية"],
+  authors: [{ name: "فينتك" }],
   openGraph: {
-    title: "ساسaaS - منصة متعددة المستأجرين",
-    description: "حل سحابي متطور لإدارة عدة مؤسسات وفريق عمل",
+    title: "فينتك - تطبيقك المالي الموثوق",
+    description: "تطبيق مالي متقدم يسهل إدارة أمورك المالية بكل أمان وسرعة",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ساسaaS",
-    description: "منصة متكاملة لإدارة الأعمال المتعددة",
+    title: "فينتك - تطبيقك المالي الموثوق",
+    description: "تطبيق مالي متقدم يسهل إدارة أمورك المالية بكل أمان وسرعة",
   },
 };
 
@@ -44,10 +42,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

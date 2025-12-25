@@ -1,4 +1,8 @@
-// Multi-tenant SaaS Application Schema
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -9,249 +13,179 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Tenant (Organization) Model
-model Tenant {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  logo        String?
-  domain      String?
-  plan        Plan     @default(FREE)
-  status      TenantStatus @default(ACTIVE)
-  maxUsers    Int      @default(5)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  users       TenantUser[]
-  projects    Project[]
-  invitations Invitation[]
-  subscriptions Subscription[]
-  usageStats  UsageStats[]
-  sessions    Session[]
-
-  @@map("tenants")
-}
-
-// User Model
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  avatar    String?
-  password  String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Security Questions
-  securityQuestion1  String?
-  securityAnswer1   String?
-  securityQuestion2  String?
-  securityAnswer2   String?
-  securityQuestion3  String?
-  securityAnswer3   String?
-
-  // Password Reset
-  resetToken       String?
-  resetTokenExpires DateTime?
-
-  // Two-Factor Authentication
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String?
-
+  id              String   @id @default(cuid())
+  mobileNumber    String   @unique
+  mobileVerified  Boolean  @default(false)
+  name            String?
+  email           String?  @unique
+  password        String?
+  role            UserRole @default(USER)
+  status          UserStatus @default(ACTIVE)
+  roleId          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
   // Relations
-  tenantUsers TenantUser[]
-  invitationsSent Invitation[] @relation("InvitationSent")
-  invitationsReceived Invitation[] @relation("InvitationReceived")
-  sessions    Session[]
-
+  accounts        Account[]
+  transactions    Transaction[]
+  sessions        Session[]
+  userPermissions UserPermission[]
+  userRole        Role?       @relation(fields: [roleId], references: [id])
+  
   @@map("users")
 }
 
-// Tenant-User Relationship (Membership)
-model TenantUser {
-  id        String   @id @default(cuid())
-  userId    String
-  tenantId  String
-  role      UserRole @default(MEMBER)
-  joinedAt  DateTime @default(now())
-  isActive  Boolean  @default(true)
-
-  // Relations
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  projects   Project[]
-  assigned   Task[]   @relation("TaskAssigned")
-  created    Task[]   @relation("TaskCreated")
-
-  @@unique([userId, tenantId])
-  @@map("tenant_users")
-}
-
-// Project Model (Tenant-scoped)
-model Project {
-  id          String        @id @default(cuid())
-  name        String
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
-  status      ProjectStatus @default(ACTIVE)
-  tenantId    String
-  createdById String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
+  category    String   @default("general")
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
   // Relations
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdBy TenantUser @relation(fields: [createdById], references: [id])
-  tasks     Task[]
-
-  @@map("projects")
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  
+  @@map("permissions")
 }
 
-// Task Model (Project-scoped)
-model Task {
-  id          String     @id @default(cuid())
-  title       String
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
-  status      TaskStatus @default(TODO)
-  priority    Priority   @default(MEDIUM)
-  projectId   String
-  assignedId  String?
-  createdById String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
   // Relations
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assigned  TenantUser? @relation("TaskAssigned", fields: [assignedId], references: [id])
-  createdBy TenantUser @relation("TaskCreated", fields: [createdById], references: [id])
-
-  @@map("tasks")
+  rolePermissions RolePermission[]
+  users         User[]
+  
+  @@map("roles")
 }
 
-// Invitation Model
-model Invitation {
-  id       String           @id @default(cuid())
-  email    String
-  role     UserRole         @default(MEMBER)
-  token    String           @unique
-  status   InvitationStatus @default(PENDING)
-  tenantId String
-  invitedById String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+model RolePermission {
+  id          String   @id @default(cuid())
+  roleId      String
+  permissionId String
+  createdAt   DateTime @default(now())
+  
   // Relations
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invitedBy  User   @relation("InvitationSent", fields: [invitedById], references: [id])
-  invitedUser User?  @relation("InvitationReceived", fields: [email], references: [email])
-
-  @@unique([email, tenantId])
-  @@map("invitations")
+  role        Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission  Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
 }
 
-// Subscription Model
-model Subscription {
-  id          String          @id @default(cuid())
-  tenantId    String
-  plan        Plan
-  status      SubscriptionStatus @default(ACTIVE)
-  startDate   DateTime
-  endDate     DateTime?
-  amount      Float?
-  currency    String          @default("USD")
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
+model UserPermission {
+  id          String   @id @default(cuid())
+  userId      String
+  permissionId String
+  grantedBy   String? // User ID who granted this permission
+  grantedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@map("subscriptions")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
 }
 
-// Usage Statistics Model
-model UsageStats {
-  id        String   @id @default(cuid())
-  tenantId  String
-  metric    String
-  value     Int
-  date      DateTime
-  createdAt DateTime @default(now())
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, metric, date])
-  @@map("usage_stats")
+model Account {
+  id          String      @id @default(cuid())
+  userId      String
+  accountType AccountType
+  accountNumber String     @unique
+  balance     Float       @default(0)
+  currency    String      @default("EGP")
+  status      AccountStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  
+  @@map("accounts")
 }
 
-// Session Model for NextAuth
+model Transaction {
+  id              String           @id @default(cuid())
+  userId          String
+  accountId       String
+  type            TransactionType
+  amount          Float
+  currency        String           @default("EGP")
+  description     String?
+  reference       String?
+  status          TransactionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  @@map("transactions")
+}
+
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique
   userId       String
-  tenantId     String?
-  expires      DateTime
+  token        String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
-
+  expiresAt    DateTime
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@map("sessions")
 }
 
-// Enums
-enum Plan {
-  FREE
-  PRO
-  ENTERPRISE
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
-enum TenantStatus {
+enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  BLOCKED
 }
 
-enum UserRole {
-  OWNER
-  ADMIN
-  MEMBER
+enum AccountType {
+  SAVINGS
+  CURRENT
+  INVESTMENT
+  WALLET
 }
 
-enum ProjectStatus {
+enum AccountStatus {
   ACTIVE
-  ARCHIVED
-  DELETED
+  INACTIVE
+  FROZEN
+  CLOSED
 }
 
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  PAYMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
   COMPLETED
+  FAILED
   CANCELLED
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  EXPIRED
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELLED
-  EXPIRED
-  PENDING
 }
