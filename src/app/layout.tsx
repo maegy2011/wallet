@@ -1,37 +1,62 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Cairo } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import Providers from "@/components/providers";
+import Header from "@/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const cairo = Cairo({
+  variable: "--font-cairo",
+  subsets: ["arabic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "Mahfza | محفظة - Track Your Balances with Ease",
+  description: "A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance. مع محفظة، سجل أرصدتك وتابع أدائك المالي بسهولة وأمان.",
+  keywords: ["Mahfza", "محفظة", "portfolio tracking", "balance tracking", "broker tools", "financial monitoring", "investment tracking", "Arabic finance", "brokerage accounts"],
+  authors: [{ name: "Mahfza Team" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.png",
+    apple: "/logo.png",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "Mahfza | محفظة - Track Your Balances with Ease",
+    description: "A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance.",
+    url: "https://mahfza.com",
+    siteName: "Mahfza | محفظة",
     type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1024,
+        height: 1024,
+        alt: "Mahfza Logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "Mahfza | محفظة - Track Your Balances with Ease",
+    description: "A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance.",
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -43,10 +68,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${cairo.variable} font-sans antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster />
+        <Providers>
+          <Header />
+          <main className="min-h-screen">
+            {children}
+          </main>
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "1767106269714",
+    "name": "Mohamed adel",
+    "email": "ma.egy2011@gmail.com",
+    "password": "$2b$12$wLmXI5AIZ3fGfDlEo/HWi.73D/.W36NRwj7tmCkC8/H8zZ2WskoGm",
+    "createdAt": "2025-12-30T14:51:09.714Z",
+    "onboarded": false,
+    "plan": "free",
+    "emailVerified": false,
+    "loginAttempts": 0
+  }
+]
