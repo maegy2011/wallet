@@ -290,9 +290,25 @@ export class AdminAuthService {
         }
       }
 
-      // Import CaptchaService dynamically to avoid circular dependencies
-      const { CaptchaService } = await import('./captcha');
-      return CaptchaService.verifyCaptcha(captchaId, captchaAnswer);
+      // Call the captcha verification API
+      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/captcha`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: captchaId,
+          answer: captchaAnswer,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Captcha verification failed:', response.status);
+        return false;
+      }
+
+      const result = await response.json();
+      return result.success && result.data.valid;
     } catch (error) {
       console.error('Captcha verification error:', error);
       return false;

@@ -150,7 +150,7 @@ export default function Header() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-40">
+    <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-[100]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2">
@@ -311,14 +311,15 @@ export default function Header() {
       {/* Mobile menu */}
       {isMobileMenuOpen && (
         <>
-          {/* Backdrop overlay */}
-          <div 
+          {/* Backdrop overlay - positioned below header */}
+          <div
             className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            style={{ top: '4rem' }} // Starts below header (4rem = 64px)
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          
+
           {/* Menu panel */}
-          <div className="md:hidden fixed top-16 left-0 right-0 bg-white border-b shadow-lg z-50">
+          <div className="md:hidden fixed top-16 left-0 right-0 bg-white border-b shadow-lg z-[90]">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
               <button 
                 onClick={() => scrollToSection('features')}

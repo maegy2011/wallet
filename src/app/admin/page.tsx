@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Users, 
-  DollarSign, 
-  Package, 
-  TrendingUp, 
+import {
+  Users,
+  DollarSign,
+  Package,
+  TrendingUp,
   Activity,
   AlertCircle,
   CheckCircle,
@@ -25,6 +25,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
+import { ReactNextCaptcha } from '@/components/ReactNextCaptcha';
 
 interface DashboardStats {
   customers: {
@@ -88,14 +89,13 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loginForm, setLoginForm] = useState({ 
-    email: '', 
-    password: '', 
-    captchaId: '', 
+  const [loginForm, setLoginForm] = useState({
+    email: '',
+    password: '',
+    captchaId: '',
     captchaAnswer: '',
     twoFactorCode: ''
   });
-  const [captcha, setCaptcha] = useState<{ id: string; question: string } | null>(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
@@ -133,23 +133,14 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated]);
 
-  // Generate captcha on component mount and when needed
-  useEffect(() => {
-    if (!isAuthenticated) {
-      generateCaptcha();
-    }
-  }, [isAuthenticated]);
-
-  const generateCaptcha = async () => {
-    try {
-      const response = await fetch('/api/admin/captcha');
-      const data = await response.json();
-      if (data.success) {
-        setCaptcha(data.data);
-        setLoginForm(prev => ({ ...prev, captchaId: data.data.id, captchaAnswer: '' }));
+  const handleCaptchaChange = (success: boolean, captchaId?: string, captchaAnswer?: string) => {
+    if (success && captchaId && captchaAnswer) {
+      setLoginForm(prev => ({ ...prev, captchaId, captchaAnswer }));
+      if (error) {
+        setError('');
       }
-    } catch (error) {
-      console.error('Failed to generate captcha:', error);
+    } else {
+      setLoginForm(prev => ({ ...prev, captchaId: '', captchaAnswer: '' }));
     }
   };
 
@@ -200,13 +191,11 @@ export default function AdminDashboard() {
         }
       } else {
         setError(data.error?.message || 'Login failed');
-        // Generate new captcha on failed attempt
-        generateCaptcha();
+        setLoginForm(prev => ({ ...prev, captchaId: '', captchaAnswer: '' }));
       }
     } catch (error) {
       setError('Network error. Please try again.');
-      // Generate new captcha on failed attempt
-      generateCaptcha();
+      setLoginForm(prev => ({ ...prev, captchaId: '', captchaAnswer: '' }));
     }
     setIsLoading(false);
   };
@@ -470,38 +459,14 @@ export default function AdminDashboard() {
                     required
                   />
                 </div>
-                
-                {captcha && (
-                  <div className="space-y-2">
-                    <Label htmlFor="captchaAnswer">CAPTCHA</Label>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
-                      <span className="text-lg font-mono">{captcha.question}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={generateCaptcha}
-                      >
-                        Refresh
-                      </Button>
-                    </div>
-                    <Input
-                      id="captchaAnswer"
-                      type="text"
-                      value={loginForm.captchaAnswer}
-                      onChange={(e) => setLoginForm({ ...loginForm, captchaAnswer: e.target.value })}
-                      placeholder="Enter answer"
-                      required
-                    />
-                    <input
-                      type="hidden"
-                      name="captchaId"
-                      value={loginForm.captchaId}
-                    />
-                  </div>
-                )}
-                
-                <Button type="submit" className="w-full" disabled={isLoading}>
+
+                <ReactNextCaptcha
+                  onVerify={handleCaptchaChange}
+                  theme="light"
+                  lang="en"
+                />
+
+                <Button type="submit" className="w-full" disabled={isLoading || !loginForm.captchaId || !loginForm.captchaAnswer}>
                   {isLoading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
