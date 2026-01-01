@@ -3,17 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Globe, Check, X, Shield, BookOpen, RefreshCw } from 'lucide-react';
+import { Globe, Check, X, Shield, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { loadCaptchaEnginge, validateCaptcha, LoadCanvasTemplate } from 'react-simple-captcha';
+import { CustomCaptcha } from '@/components/CustomCaptcha';
 
 export default function VerifyPage() {
   const [isRTL, setIsRTL] = useState(false);
-  const [captchaValue, setCaptchaValue] = useState('');
-  const [captchaText, setCaptchaText] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -25,8 +23,6 @@ export default function VerifyPage() {
       router.push('/signup');
       return;
     }
-    // Generate initial CAPTCHA
-    generateCaptcha();
   }, [router]);
 
   const toggleLanguage = () => {
@@ -35,17 +31,9 @@ export default function VerifyPage() {
     document.documentElement.lang = !isRTL ? 'ar' : 'en';
   };
 
-  const generateCaptcha = () => {
-    const captcha = loadCaptchaEnginge(6, 'white', 'black', 'upper');
-    setCaptchaText(captcha);
-    setCaptchaValue('');
-    setError('');
-  };
-
   const handleVerify = () => {
-    if (!captchaValue || !validateCaptcha(captchaValue, false)) {
-      setError(isRTL ? 'فشل التحقق. يرجى المحاولة مرة أخرى.' : 'Verification failed. Please try again.');
-      generateCaptcha(); // Reload CAPTCHA on failure
+    if (!captchaToken) {
+      setError(isRTL ? 'يرجى إكمال التحقق من CAPTCHA' : 'Please complete the CAPTCHA verification');
       return;
     }
 
@@ -64,10 +52,14 @@ export default function VerifyPage() {
     }, 1500);
   };
 
-  const handleCaptchaChange = (value: string) => {
-    setCaptchaValue(value);
-    if (error) {
-      setError('');
+  const handleCaptchaChange = (success: boolean, token?: string) => {
+    if (success && token) {
+      setCaptchaToken(token);
+      if (error) {
+        setError('');
+      }
+    } else {
+      setCaptchaToken('');
     }
   };
 
@@ -101,30 +93,14 @@ export default function VerifyPage() {
           {/* CAPTCHA */}
           <div>
             <Label className="text-base font-medium">
-              {isRTL ? 'رمز التحقق' : 'CAPTCHA Verification'}
+              {isRTL ? 'رمز التحقق' : 'Security Verification'}
             </Label>
             <div className="mt-4">
-              <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
-                <LoadCanvasTemplate 
-                  reloadText={isRTL ? 'تحديث' : 'Reload Captcha'}
-                  reloadColor="blue"
-                />
-              </div>
-              <Input
-                type="text"
-                value={captchaValue}
-                onChange={(e) => handleCaptchaChange(e.target.value)}
-                placeholder={isRTL ? 'أدخل الرمز' : 'Enter the code'}
-                className="mt-2 w-full"
+              <CustomCaptcha
+                onVerify={handleCaptchaChange}
+                theme="light"
+                lang="en"
               />
-              <button
-                type="button"
-                onClick={generateCaptcha}
-                className="text-sm text-blue-600 hover:text-blue-700 mt-2 flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                {isRTL ? 'تحديث الرمز' : 'Reload Code'}
-              </button>
             </div>
           </div>
 
@@ -140,7 +116,7 @@ export default function VerifyPage() {
           <Button 
             onClick={handleVerify}
             className="w-full bg-blue-600 hover:bg-blue-700"
-            disabled={isLoading || !captchaValue}
+            disabled={isLoading || !captchaToken}
           >
             {isLoading ? 
               (isRTL ? 'جاري التحقق...' : 'Verifying...') : 

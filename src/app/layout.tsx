@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import Providers from "@/components/providers";
 import Header from "@/components/Header";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,6 +19,7 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('http://localhost:3000'),
   title: "Mahfza | محفظة - Track Your Balances with Ease",
   description: "A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance. مع محفظة، سجل أرصدتك وتابع أدائك المالي بسهولة وأمان.",
   keywords: ["Mahfza", "محفظة", "portfolio tracking", "balance tracking", "broker tools", "financial monitoring", "investment tracking", "Arabic finance", "brokerage accounts"],
@@ -70,13 +72,15 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cairo.variable} font-sans antialiased bg-background text-foreground`}
       >
-        <Providers>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Toaster />
-        </Providers>
+        <ErrorBoundary componentName="RootLayout">
+          <Providers>
+            <Header />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Toaster />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

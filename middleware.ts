@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   if (isProtectedRoute) {
     const token = await getToken({ 
       req: request, 
-      secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-change-in-production' 
+      secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development-only' 
     });
 
     if (!token) {

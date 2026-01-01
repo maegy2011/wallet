@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Globe, Eye, EyeOff, Check, X, BookOpen, RefreshCw } from 'lucide-react';
+import { Globe, Eye, EyeOff, Check, X, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
-import { loadCaptchaEnginge, validateCaptcha, LoadCanvasTemplate } from 'react-simple-captcha';
+import { CustomCaptcha } from '@/components/CustomCaptcha';
 
 export default function SigninPage() {
   const { data: session } = useSession();
@@ -22,9 +22,8 @@ export default function SigninPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaValue, setCaptchaValue] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [captchaError, setCaptchaError] = useState('');
-  const [captchaText, setCaptchaText] = useState('');
   const router = useRouter();
 
   // Redirect if already authenticated
@@ -37,18 +36,6 @@ export default function SigninPage() {
       }
     }
   }, [session, router]);
-
-  useEffect(() => {
-    // Generate initial CAPTCHA
-    generateCaptcha();
-  }, []);
-
-  const generateCaptcha = () => {
-    const captcha = loadCaptchaEnginge(6, 'white', 'black', 'upper');
-    setCaptchaText(captcha);
-    setCaptchaValue('');
-    setCaptchaError('');
-  };
 
   const toggleLanguage = () => {
     setIsRTL(!isRTL);
@@ -74,8 +61,8 @@ export default function SigninPage() {
       newErrors.password = isRTL ? 'كلمة المرور مطلوبة' : 'Password is required';
     }
 
-    if (!captchaValue || !validateCaptcha(captchaValue, false)) {
-      newErrors.captcha = isRTL ? 'رمز التحقق غير صحيح' : 'Invalid CAPTCHA code';
+    if (!captchaToken) {
+      newErrors.captcha = isRTL ? 'يرجى إكمال التحقق من CAPTCHA' : 'Please complete the CAPTCHA verification';
     }
 
     setErrors(newErrors);
@@ -93,6 +80,7 @@ export default function SigninPage() {
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
+        captchaToken: captchaToken,
         isSignup: false,
         redirect: false,
       });
@@ -120,13 +108,17 @@ export default function SigninPage() {
     }
   };
 
-  const handleCaptchaChange = (value: string) => {
-    setCaptchaValue(value);
-    if (captchaError) {
-      setCaptchaError('');
-    }
-    if (errors.captcha) {
-      setErrors(prev => ({ ...prev, captcha: '' }));
+  const handleCaptchaChange = (success: boolean, token?: string) => {
+    if (success && token) {
+      setCaptchaToken(token);
+      if (captchaError) {
+        setCaptchaError('');
+      }
+      if (errors.captcha) {
+        setErrors(prev => ({ ...prev, captcha: '' }));
+      }
+    } else {
+      setCaptchaToken('');
     }
   };
 
@@ -211,30 +203,14 @@ export default function SigninPage() {
             {/* CAPTCHA */}
             <div>
               <Label>
-                {isRTL ? 'رمز التحقق' : 'CAPTCHA Verification'}
+                {isRTL ? 'رمز التحقق' : 'Security Verification'}
               </Label>
               <div className="mt-2">
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
-                  <LoadCanvasTemplate 
-                    reloadText={isRTL ? 'تحديث' : 'Reload Captcha'}
-                    reloadColor="blue"
-                  />
-                </div>
-                <Input
-                  type="text"
-                  value={captchaValue}
-                  onChange={(e) => handleCaptchaChange(e.target.value)}
-                  placeholder={isRTL ? 'أدخل الرمز' : 'Enter the code'}
-                  className="mt-2 w-full"
+                <CustomCaptcha
+                  onVerify={handleCaptchaChange}
+                  theme="light"
+                  lang="en"
                 />
-                <button
-                  type="button"
-                  onClick={generateCaptcha}
-                  className="text-sm text-blue-600 hover:text-blue-700 mt-2 flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  {isRTL ? 'تحديث الرمز' : 'Reload Code'}
-                </button>
               </div>
               {errors.captcha && (
                 <p className="text-red-500 text-sm mt-1">{errors.captcha}</p>

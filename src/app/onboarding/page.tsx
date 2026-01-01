@@ -24,21 +24,21 @@ export default function OnboardingPage() {
   const slides: OnboardingSlide[] = [
     {
       id: 1,
-      title: 'Track Your Balances',
+      title: 'Add Your First Wallet',
       description: 'Manually add your brokerage wallets to start tracking.',
       icon: <Wallet className="w-8 h-8" />,
       image: 'https://images.unsplash.com/photo-1554224154-260325c0578e?w=400&h=300&fit=crop'
     },
     {
       id: 2,
-      title: 'Record Transactions',
+      title: 'Log Transactions',
       description: 'Easily log deposits, withdrawals, and transfers.',
       icon: <FileText className="w-8 h-8" />,
       image: 'https://images.unsplash.com/photo-1554224154-260325c0578e?w=400&h=300&fit=crop'
     },
     {
       id: 3,
-      title: 'Monitor Your Portfolio',
+      title: 'View Performance',
       description: 'Get insights into your portfolio performance.',
       icon: <TrendingUp className="w-8 h-8" />,
       image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop'

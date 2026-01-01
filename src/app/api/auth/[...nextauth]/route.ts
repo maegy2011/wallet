@@ -7,46 +7,62 @@ import path from 'path';
 const usersFilePath = path.join(process.cwd(), 'data', 'users.json');
 
 // Helper function to read users from mock database
-async function getUsers() {
+async function getUsers(): Promise<any[]> {
   try {
     const data = await fs.readFile(usersFilePath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
+    console.error('Error reading users file:', error);
     return [];
   }
 }
 
 // Helper function to write users to mock database
-async function saveUsers(users: any[]) {
-  await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2));
+async function saveUsers(users: any[]): Promise<void> {
+  try {
+    await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2));
+  } catch (error) {
+    console.error('Error saving users file:', error);
+    throw new Error('Failed to save user data');
+  }
 }
 
 // Helper function to find user by email
-async function findUserByEmail(email: string) {
-  const users = await getUsers();
-  return users.find(user => user.email === email);
+async function findUserByEmail(email: string): Promise<any | undefined> {
+  try {
+    const users = await getUsers();
+    return users.find(user => user.email === email);
+  } catch (error) {
+    console.error('Error finding user by email:', error);
+    return undefined;
+  }
 }
 
 // Helper function to create a new user
-async function createUser(userData: any) {
-  const users = await getUsers();
-  const hashedPassword = await bcrypt.hash(userData.password, 12);
-  
-  const newUser = {
-    id: Date.now().toString(),
-    name: userData.name,
-    email: userData.email,
-    password: hashedPassword,
-    createdAt: new Date().toISOString(),
-    onboarded: false,
-    plan: 'free',
-    emailVerified: false,
-    loginAttempts: 0
-  };
-  
-  users.push(newUser);
-  await saveUsers(users);
-  return newUser;
+async function createUser(userData: any): Promise<any> {
+  try {
+    const users = await getUsers();
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+    
+    const newUser = {
+      id: Date.now().toString(),
+      name: userData.name,
+      email: userData.email,
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
+      onboarded: false,
+      plan: 'free',
+      emailVerified: false,
+      loginAttempts: 0
+    };
+    
+    users.push(newUser);
+    await saveUsers(users);
+    return newUser;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    throw new Error('Failed to create user account');
+  }
 }
 
 export const authOptions = {
@@ -57,14 +73,21 @@ export const authOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
         name: { label: 'Name', type: 'text' },
-        isSignup: { label: 'Is Signup', type: 'boolean' }
+        isSignup: { label: 'Is Signup', type: 'boolean' },
+        captchaToken: { label: 'CAPTCHA Token', type: 'text' }
       },
       async authorize(credentials) {
         try {
-          const { email, password, name, isSignup } = credentials;
+          const { email, password, name, isSignup, captchaToken } = credentials;
 
           if (!email || !password) {
             throw new Error('Email and password are required');
+          }
+
+          // In production, you would verify the captcha token here
+          // For now, we'll just check if it exists
+          if (!captchaToken) {
+            throw new Error('CAPTCHA verification is required');
           }
 
           // More robust boolean checking
@@ -122,7 +145,7 @@ export const authOptions = {
           } else {
             throw new Error('Invalid authentication request');
           }
-          } catch (error) {
+        } catch (error) {
           console.error('AUTH ERROR:', error);
           throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
@@ -131,6 +154,10 @@ export const authOptions = {
   ],
   session: {
     strategy: 'jwt' as const,
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
     async jwt({ token, user }) {
