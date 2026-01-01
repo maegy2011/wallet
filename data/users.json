@@ -1,13 +1,15 @@
 [
   {
-    "id": "1767252715703",
+    "id": "1767264198184iy5n7e8br",
     "name": "Mohamed adel",
     "email": "ma.egy2011@gmail.com",
-    "password": "$2b$12$4h7OTzk9vAS.y8WcIhM8UexLGc7Lopv6IrUWmDeL67GndjWnZox5m",
-    "createdAt": "2026-01-01T07:31:55.703Z",
+    "password": "$2b$12$AeMygqlQbGpnE/XHpfppo.Rtd7HDKRKBqceHS5DU3XkBHEEblK/ti",
+    "createdAt": "2026-01-01T10:43:18.184Z",
+    "updatedAt": "2026-01-01T10:43:18.184Z",
     "onboarded": false,
     "plan": "free",
     "emailVerified": false,
-    "loginAttempts": 0
+    "loginAttempts": 0,
+    "lastLoginAt": null
   }
 ]

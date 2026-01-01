@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Header Menu Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #16a34a;
+            background: #f0fdf4;
+            border: 1px solid #16a34a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .info {
+            color: #2563eb;
+            background: #eff6ff;
+            border: 1px solid #2563eb;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .warning {
+            color: #ca8a04;
+            background: #fefce8;
+            border: 1px solid #ca8a04;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .fixed {
+            color: #dc2626;
+            background: #fef2f2;
+            border: 1px solid #dc2626;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .demo-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .demo-link {
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s;
+        }
+        .demo-link:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 8px;
+        }
+        .admin-token {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .mobile-preview {
+            border: 2px solid #374151;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f9fafb;
+            margin: 15px 0;
+        }
+        .mobile-header {
+            background: #1f2937;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mobile-menu {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .mobile-menu-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+        }
+        .mobile-menu-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 Mobile Header Menu Fix</h1>
+    
+    <div class="test-section">
+        <div class="fixed">
+            <h2>🛠️ Mobile Menu Issues Fixed</h2>
+            <p><strong>Problems Identified:</strong></p>
+            <ul>
+                <li>Mobile menu not positioning correctly</li>
+                <li>Scrolling not working properly on mobile</li>
+                <li>Menu not closing after navigation</li>
+                <li>Poor touch experience and visual feedback</li>
+                <li>No backdrop overlay for better UX</li>
+            </ul>
+            <p><strong>Solutions Applied:</strong></p>
+            <ul>
+                <li>Fixed positioning with proper z-index</li>
+                <li>Added backdrop overlay for better UX</li>
+                <li>Improved mobile scroll offset calculation</li>
+                <li>Better touch targets and visual feedback</li>
+                <li>Smooth menu close animations</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✨ Mobile Menu Improvements</h2>
+        <ul class="feature-list">
+            <li>Fixed positioning with <code>fixed top-16 left-0 right-0</code></li>
+            <li>Added backdrop overlay with <code>bg-black bg-opacity-50 z-40</code></li>
+            <li>Improved z-index management for proper layering</li>
+            <li>Better mobile scroll offset (30px vs 20px)</li>
+            <li>Enhanced touch targets with <code>py-3</code> padding</li>
+            <li>Visual separators with <code>border-b border-gray-100</code></li>
+            <li>Smooth menu close with 150ms delay before scrolling</li>
+            <li>Max height with scroll: <code>max-h-[calc(100vh-4rem)] overflow-y-auto</code></li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>📱 Mobile Menu Structure</h2>
+        <div class="mobile-preview">
+            <div class="mobile-header">
+                <span>📱 Mahfza | محفظة</span>
+                <span>☰ Menu</span>
+            </div>
+            <div class="mobile-menu">
+                <div class="mobile-menu-item">📱 Backdrop Overlay (Click to close)</div>
+                <div class="mobile-menu-item">📍 Fixed Position Menu Panel</div>
+                <div class="mobile-menu-item">🎯 Features (Smooth Scroll)</div>
+                <div class="mobile-menu-item">⚙️ How It Works</div>
+                <div class="mobile-menu-item">💰 Pricing</div>
+                <div class="mobile-menu-item">⭐ Testimonials</div>
+                <div class="mobile-menu-item">ℹ️ About</div>
+                <div class="mobile-menu-item">❓ FAQ</div>
+                <div class="mobile-menu-item">📧 Contact</div>
+                <div class="mobile-menu-item">🔧 Admin Panel (if admin)</div>
+                <div class="mobile-menu-item">👤 User Actions</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Mobile Testing Scenarios</h2>
+        
+        <h3>1. Responsive Testing</h3>
+        <div class="warning">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Open <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+                <li>Resize browser to mobile width (less than 768px)</li>
+                <li>Click the hamburger menu (☰)</li>
+                <li>Verify menu appears with backdrop overlay</li>
+                <li>Test clicking menu items and backdrop</li>
+            </ol>
+        </div>
+
+        <h3>2. Navigation Testing</h3>
+        <div class="demo-links">
+            <a href="http://localhost:3000#features" target="_blank" class="demo-link">Mobile Features</a>
+            <a href="http://localhost:3000#how-it-works" target="_blank" class="demo-link">Mobile How It Works</a>
+            <a href="http://localhost:3000#pricing" target="_blank" class="demo-link">Mobile Pricing</a>
+            <a href="http://localhost:3000#testimonials" target="_blank" class="demo-link">Mobile Testimonials</a>
+        </div>
+
+        <h3>3. Admin Mobile Menu</h3>
+        <div class="warning">
+            <strong>Admin Testing:</strong>
+            <ol>
+                <li>Login as admin using button below</li>
+                <li>Navigate to admin page on mobile</li>
+                <li>Test admin mobile menu items</li>
+                <li>Verify smooth scrolling to admin sections</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔐 Admin Login for Mobile Testing</h2>
+        <div id="admin-status" class="info">
+            Checking admin status...
+        </div>
+        <button onclick="loginAsAdmin()">Login as Admin</button>
+        <button onclick="logoutAdmin()">Logout Admin</button>
+        <div id="admin-token" class="admin-token">
+            No admin token set
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Technical Implementation</h2>
+        
+        <h3>Mobile Menu Structure</h3>
+        <div class="code-block">
+{/* Mobile menu */}
+{isMobileMenuOpen && (
+  <>
+    {/* Backdrop overlay */}
+    <div 
+      className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+      onClick={() => setIsMobileMenuOpen(false)}
+    />
+    
+    {/* Menu panel */}
+    <div className="md:hidden fixed top-16 left-0 right-0 bg-white border-b shadow-lg z-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+        {/* Menu items */}
+      </div>
+    </div>
+  </>
+)}
+        </div>
+
+        <h3>Improved Scroll Function</h3>
+        <div class="code-block">
+const scrollToSection = (sectionId: string) => {
+  if (isMobileMenuOpen) {
+    setIsMobileMenuOpen(false);
+    setTimeout(() => {
+      performScroll(sectionId);
+    }, 150); // Delay for smooth menu close
+  } else {
+    performScroll(sectionId);
+  }
+};
+
+const getHeaderOffset = () => {
+  const headerHeight = header.offsetHeight;
+  const extraPadding = window.innerWidth < 768 ? 30 : 20; // More padding on mobile
+  return headerHeight + extraPadding;
+};
+        </div>
+
+        <h3>Mobile CSS Improvements</h3>
+        <div class="code-block">
+@media (max-width: 768px) {
+  html {
+    scroll-padding-top: 6rem; /* 96px - more padding for mobile */
+  }
+}
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📱 Mobile UX Improvements</h2>
+        <ul class="feature-list">
+            <li><strong>Touch-Friendly:</strong> Larger touch targets (44px minimum)</li>
+            <li><strong>Visual Feedback:</strong> Hover states and transitions</li>
+            <li><strong>Backdrop:</strong> Click outside to close menu</li>
+            <li><strong>Scroll Lock:</strong> Menu doesn't interfere with page scroll</li>
+            <li><strong>Smooth Animations:</strong> Menu open/close transitions</li>
+            <li><strong>Proper Z-Index:</strong> Menu appears above all content</li>
+            <li><strong>Responsive Height:</strong> Menu adapts to screen height</li>
+            <li><strong>Overflow Handling:</strong> Long menus scroll within menu area</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Expected Mobile Behavior</h2>
+        <ul>
+            <li><strong>Menu Opens:</strong> Tapping hamburger shows menu with backdrop</li>
+            <li><strong>Menu Closes:</strong> Tapping backdrop or menu items closes menu</li>
+            <li><strong>Smooth Scroll:</strong> Menu closes, then scrolls to section</li>
+            <li><strong>Perfect Positioning:</strong> Sections appear below header on mobile</li>
+            <li><strong>Touch Targets:</strong> All menu items are easily tappable</li>
+            <li><strong>Visual Separation:</strong> Clear borders between menu items</li>
+            <li><strong>Admin Access:</strong> Admin menu items appear when logged in</li>
+            <li><strong>Responsive:</strong> Works on all mobile screen sizes</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Mobile Troubleshooting</h2>
+        <div class="warning">
+            <p>If mobile menu issues persist:</p>
+            <ul>
+                <li>Test in different mobile browsers (Chrome, Safari, Firefox)</li>
+                <li>Check browser console for JavaScript errors</li>
+                <li>Verify touch events are working correctly</li>
+                <li>Test with device simulation in DevTools</li>
+                <li>Clear mobile browser cache and reload</li>
+                <li>Check for CSS conflicts with mobile styles</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function loginAsAdmin() {
+            const adminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtanY5YzFhdTAwMDBtNWhxeWJzYjVld3kiLCJlbWFpbCI6Im1vaGFtZWQuYWRlbEBsYWIuY29tIiwibmFtZSI6Ik1vaGFtZWQgQWRlbCIsInJvbGUiOiJTVVBFUl9BRE1JTiIsInR3b0ZhY3RvckVuYWJsZWQiOmZhbHNlLCJpYXQiOjE3NjcyNjcwNTUsImV4cCI6MTc2NzM1MzQ1NX0.js_DMFnZM-BmGB55CGqfQ-kXyQ5zEPzu2KQ7sS_iksc';
+            localStorage.setItem('adminToken', adminToken);
+            document.getElementById('admin-token').textContent = adminToken;
+            checkAdminStatus();
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('adminToken');
+            document.getElementById('admin-token').textContent = 'No admin token set';
+            checkAdminStatus();
+        }
+
+        function checkAdminStatus() {
+            const adminToken = localStorage.getItem('adminToken');
+            const statusDiv = document.getElementById('admin-status');
+            
+            if (adminToken) {
+                statusDiv.innerHTML = '<div class="success">✅ Admin logged in - Ready for mobile testing</div>';
+                statusDiv.className = 'success';
+            } else {
+                statusDiv.innerHTML = '<div class="info">❌ Admin not logged in</div>';
+                statusDiv.className = 'info';
+            }
+        }
+
+        // Check status on page load
+        checkAdminStatus();
+
+        // Add mobile detection
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        // Show mobile warning if on desktop
+        if (!isMobile()) {
+            const mobileWarning = document.createElement('div');
+            mobileWarning.className = 'warning';
+            mobileWarning.innerHTML = `
+                <strong>💡 Desktop Testing Tip:</strong> 
+                Use browser DevTools to simulate mobile devices (Ctrl+Shift+M or Cmd+Option+M) 
+                or resize your browser window to less than 768px width to test mobile menu functionality.
+            `;
+            document.body.insertBefore(mobileWarning, document.body.firstChild);
+        }
+    </script>
+</body>
+</html>

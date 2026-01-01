@@ -121,6 +121,13 @@
   }
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5rem; /* 80px - accounts for fixed header */
+  }
+  /* Better mobile scroll behavior */
+  @media (max-width: 768px) {
+    html {
+      scroll-padding-top: 6rem; /* 96px - more padding for mobile */
+    }
   }
   .rtl {
     direction: rtl;
