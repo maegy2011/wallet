@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Providers from "@/components/providers";
 import Header from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -73,13 +74,15 @@ export default function RootLayout({
         className={`${inter.variable} ${cairo.variable} font-sans antialiased bg-background text-foreground`}
       >
         <ErrorBoundary componentName="RootLayout">
-          <Providers>
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Toaster />
-          </Providers>
+          <LanguageProvider>
+            <Providers>
+              <Header />
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <Toaster />
+            </Providers>
+          </LanguageProvider>
         </ErrorBoundary>
       </body>
     </html>

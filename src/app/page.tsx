@@ -7,14 +7,22 @@ import { BookOpen, PieChart, Clock, Lock, Check, X, Menu, ChevronDown, Globe, Sh
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LandingPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [isRTL, setIsRTL] = useState(false);
+  const { isRTL, currentLanguage, toggleLanguage } = useLanguage();
   const [showCookieConsent, setShowCookieConsent] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAnnualBilling, setIsAnnualBilling] = useState(false);
+
+  // Translated section titles
+  const sectionTitles = {
+    features: currentLanguage === 'ar' ? 'المميزات' : 'Features',
+    howItWorks: currentLanguage === 'ar' ? 'كيف يعمل' : 'How It Works',
+    pricing: currentLanguage === 'ar' ? 'الأسعار' : 'Pricing'
+  };
 
   useEffect(() => {
     // Check if user has already consented to cookies
@@ -23,12 +31,6 @@ export default function LandingPage() {
       setShowCookieConsent(true);
     }
   }, []);
-
-  const toggleLanguage = () => {
-    setIsRTL(!isRTL);
-    document.documentElement.dir = !isRTL ? 'rtl' : 'ltr';
-    document.documentElement.lang = !isRTL ? 'ar' : 'en';
-  };
 
   const acceptCookies = () => {
     localStorage.setItem('cookie-consent', 'accepted');
@@ -52,14 +54,14 @@ export default function LandingPage() {
             <div className={`text-center lg:text-left ${isRTL ? 'lg:text-right' : ''}`}>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 {isRTL ? 
-                  'محفظة | Mahfza – تتبع أرصدتك بسهولة' :
-                  'Mahfza | محفظة – Track Your Balances with Ease'
+                  'محفظة – تتبع أرصدتك بسهولة' :
+                  'Mahfza – Track Your Balances with Ease'
                 }
               </h1>
               <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed">
                 {isRTL ? 
-                  'طريقة بسيطة وآمنة للوسطاء لتسجيل ومراقبة أرصدتهم ومعاملاتهم وأداء محافظهم يدويًا. مع محفظة، سجل أرصدتك وتابع أدائك المالي بسهولة وأمان.' :
-                  'A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance. مع محفظة، سجل أرصدتك وتابع أدائك المالي بسهولة وأمان.'
+                  'طريقة بسيطة وآمنة للوسطاء لتسجيل ومراقبة أرصدتهم ومعاملاتهم وأداء محافظهم يدويًا.' :
+                  'A simple, secure way for brokers to manually log and monitor their balances, transactions, and portfolio performance.'
                 }
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -107,7 +109,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'لماذا يحب الوسطاء محفظة' : 'Why Brokers Love Mahfza'}
+              {sectionTitles.features}
             </h2>
             <p className="text-lg text-gray-600">
               {isRTL ? 'أدوات قوية مصممة خصيصًا لاحتياجاتك' : 'Powerful tools designed specifically for your needs'}
@@ -191,7 +193,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'خطوات بسيطة للبدء' : 'Simple Steps to Get Started'}
+              {sectionTitles.howItWorks}
             </h2>
             <p className="text-lg text-gray-600">
               {isRTL ? 'ابدأ في دقائق قليلة' : 'Get started in minutes'}
@@ -271,7 +273,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'أسعار بسيطة وشفافة' : 'Simple, Transparent Pricing'}
+              {sectionTitles.pricing}
             </h2>
             <p className="text-lg text-gray-600 mb-8">
               {isRTL ? 'اختر الخطة التي تناسب احتياجاتك' : 'Choose the plan that fits your needs'}
@@ -542,76 +544,6 @@ export default function LandingPage() {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'موثوق من قبل الوسطاء' : 'Trusted by Brokers'}
-            </h2>
-            <p className="text-lg text-gray-600">
-              {isRTL ? 'ماذا يقول عملاؤنا' : 'What our clients say'}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="bg-white border-0 shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="text-gray-700 mb-4 italic">
-                  "{isRTL ? 
-                    'محفظة جعلت تتبع أرصدتي أسهل بكثير. لا مزيد من جداول البيانات!' :
-                    'Mahfza simplified how I track my balances. No more spreadsheets!'
-                  } {isRTL ? 'محفظة جعلت تتبع أرصدتي أسهل بكثير.' : 'Mahfza simplified how I track my balances.'}"
-                </blockquote>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Omar T.</p>
-                    <p className="text-sm text-gray-600">
-                      {isRTL ? 'وسيط، دبي' : 'Broker, Dubai'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-0 shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="text-gray-700 mb-4 italic">
-                  "{isRTL ? 
-                    'أخيرًا، أداة تسمح لي بتسجيل معاملاتي بشكل آمن وخصوصي.' :
-                    'Finally, a tool that lets me log my transactions securely and privately.'
-                  } {isRTL ? 'أداة موثوقة لتسجيل صفقاتي.' : 'A reliable tool for logging my trades.'}"
-                </blockquote>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Leila A.</p>
-                    <p className="text-sm text-gray-600">
-                      {isRTL ? 'مستثمرة، الرياض' : 'Investor, Riyadh'}
-                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -654,7 +586,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Mahfza | محفظة</span>
+                <span className="text-xl font-bold">{isRTL ? 'محفظة' : 'Mahfza'}</span>
               </div>
               <p className="text-gray-400 text-sm">
                 {isRTL ? 

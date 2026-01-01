@@ -1,0 +1,314 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Original User model (keeping for compatibility)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Admin Users
+model Admin {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  password        String   // Hashed
+  role            AdminRole @default(ADMIN)
+  isActive        Boolean  @default(true)
+  lastLoginAt     DateTime?
+  loginAttempts   Int      @default(0)
+  lockedUntil     DateTime?
+  twoFactorSecret String?  // For TOTP
+  twoFactorEnabled Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  auditLogs       AuditLog[]
+  
+  @@map("admins")
+}
+
+// Admin Roles
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// Audit Log for all admin actions
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  resource    String   // CUSTOMER, PACKAGE, SUBSCRIPTION, etc.
+  resourceId  String?  // ID of the affected resource
+  oldValues   String?  // JSON string of old values
+  newValues   String?  // JSON string of new values
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime @default(now())
+  
+  // Relations
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  @@map("audit_logs")
+}
+
+// Customers
+model Customer {
+  id            String        @id @default(cuid())
+  uuid          String        @unique // Customer UUID for display
+  name          String
+  businessName  String?
+  customerType  CustomerType  @default(INDIVIDUAL)
+  email         String        @unique
+  mobile        String        @unique
+  address       String?
+  province      String?
+  city          String?
+  street        String?
+  currency      String        @default("EGP")
+  status        CustomerStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  notifications  Notification[]
+  
+  @@map("customers")
+}
+
+// Customer Types
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+// Customer Status
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  DISABLED
+  ARCHIVED
+}
+
+// Packages
+model Package {
+  id                String        @id @default(cuid())
+  uuid              String        @unique // Package UUID for display
+  name              String
+  description       String?
+  type              PackageType   @default(FREE)
+  price             Float         @default(0)
+  duration          Int           // Duration in days
+  currency          String        @default("EGP")
+  taxIncluded       Boolean       @default(false)
+  taxType           String?
+  taxRate           Float         @default(0.14) // 14% default
+  renewalPolicy     RenewalPolicy @default(MONTHLY)
+  freeTrialDuration Int?          // Free trial duration in days
+  status            PackageStatus @default(ACTIVE)
+  maxWallets        Int           @default(2)
+  features          String?       // JSON string of features
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  // Relations
+  subscriptions     Subscription[]
+  invoices          Invoice[]
+  
+  @@map("packages")
+}
+
+// Package Types
+enum PackageType {
+  FREE
+  PAID
+}
+
+// Package Status
+enum PackageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// Renewal Policy
+enum RenewalPolicy {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+}
+
+// Subscriptions
+model Subscription {
+  id            String              @id @default(cuid())
+  customerId    String
+  packageId     String
+  startDate     DateTime
+  endDate       DateTime
+  autoRenewal   Boolean             @default(true)
+  status        SubscriptionStatus  @default(TRIAL)
+  cancellationDate DateTime?
+  upgradeHistory String?            // JSON string of upgrade history
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  // Relations
+  customer      Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  package       Package             @relation(fields: [packageId], references: [id])
+  invoices      Invoice[]
+  
+  @@map("subscriptions")
+}
+
+// Subscription Status
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// Invoices
+model Invoice {
+  id              String          @id @default(cuid())
+  uuid            String          @unique // Invoice UUID for display
+  customerId      String
+  packageId       String
+  subscriptionId  String
+  issueDate       DateTime        @default(now())
+  dueDate         DateTime
+  subtotal        Float
+  tax             Float           @default(0)
+  total           Float
+  paymentMethod   PaymentMethod   @default(WALLET_TRANSFER)
+  paymentUuid     String?         // Payment transaction UUID
+  paymentReference String?        // Payment reference number
+  status          InvoiceStatus   @default(PENDING)
+  renewalDate     DateTime?
+  paymentDate     DateTime?
+  attachments     String?         // JSON string of attachment URLs
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  customer        Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  package         Package         @relation(fields: [packageId], references: [id])
+  subscription    Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@map("invoices")
+}
+
+// Payment Methods
+enum PaymentMethod {
+  WALLET_TRANSFER
+  BANK_TRANSFER
+  CREDIT_CARD
+  CASH
+}
+
+// Invoice Status
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Notifications
+model Notification {
+  id            String            @id @default(cuid())
+  customerId    String
+  type          NotificationType
+  title         String
+  message       String
+  isRead        Boolean           @default(false)
+  sentVia       String?         // JSON string array: ["Email", "SMS", "Push"]
+  sentAt        DateTime?
+  scheduledFor  DateTime?
+  metadata      String?           // JSON string of additional data
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  // Relations
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+// Notification Types
+enum NotificationType {
+  SERVICE_MESSAGE
+  TRIAL_REMINDER
+  SUBSCRIPTION_RENEWAL
+  PAYMENT_REMINDER
+  PAYMENT_OVERDUE
+  PACKAGE_UPGRADE
+  SYSTEM_ANNOUNCEMENT
+}
+
+// Backup Records
+model Backup {
+  id            String       @id @default(cuid())
+  filename      String       @unique
+  filePath      String
+  fileSize      Int          // in bytes
+  checksum      String       // MD5 or SHA256 checksum
+  backupType    BackupType
+  triggeredBy   String       // Manual, Automatic, Scheduled
+  createdBy     String?      // Admin ID who triggered it
+  createdAt     DateTime     @default(now())
+  restoredAt    DateTime?
+  restoredBy    String?      // Admin ID who restored it
+  
+  @@map("backups")
+}
+
+// Backup Types
+enum BackupType {
+  MANUAL
+  AUTOMATIC
+  SCHEDULED
+}
+
+// System Settings
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+  
+  @@map("system_settings")
+}
+
+// Keep original Post model for compatibility
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

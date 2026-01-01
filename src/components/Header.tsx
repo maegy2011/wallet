@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Header() {
   const { data: session } = useSession();
@@ -14,6 +15,7 @@ export default function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { isRTL, toggleLanguage, currentLanguage } = useLanguage();
 
   // Check if user is admin (has admin token)
   useEffect(() => {
@@ -149,6 +151,14 @@ export default function Header() {
     signOut({ callbackUrl: '/' });
   };
 
+  // Translated section titles
+  const sectionTitles = {
+    features: currentLanguage === 'ar' ? 'المميزات' : 'Features',
+    howItWorks: currentLanguage === 'ar' ? 'كيف يعمل' : 'How It Works',
+    pricing: currentLanguage === 'ar' ? 'الأسعار' : 'Pricing',
+    testimonials: currentLanguage === 'ar' ? 'شهادات العملاء' : 'Testimonials'
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-[100]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -165,44 +175,20 @@ export default function Header() {
               onClick={() => scrollToSection('features')}
               className="text-gray-600 hover:text-gray-900 transition-colors"
             >
-              Features
+              {sectionTitles.features}
             </button>
             <button 
               onClick={() => scrollToSection('how-it-works')}
               className="text-gray-600 hover:text-gray-900 transition-colors"
             >
-              How It Works
+              {sectionTitles.howItWorks}
             </button>
             <button 
               onClick={() => scrollToSection('pricing')}
               className="text-gray-600 hover:text-gray-900 transition-colors"
             >
-              Pricing
+              {sectionTitles.pricing}
             </button>
-            <button 
-              onClick={() => scrollToSection('testimonials')}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Testimonials
-            </button>
-            <Link 
-              href="/about" 
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              About
-            </Link>
-            <Link 
-              href="/faq" 
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              FAQ
-            </Link>
-            <Link 
-              href="/contact" 
-              className="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Contact
-            </Link>
             
             {/* Admin Menu Items */}
             {isAdmin && (
@@ -251,6 +237,15 @@ export default function Header() {
               </>
             )}
             
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Globe className="w-4 h-4" />
+              {isRTL ? 'EN' : 'العربية'}
+            </button>
+            
             {session ? (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
@@ -290,7 +285,7 @@ export default function Header() {
                 className="bg-blue-600 hover:bg-blue-700"
                 onClick={() => router.push('/signup')}
               >
-                Start free trial
+                {currentLanguage === 'ar' ? 'ابدأ تجربة مجانية' : 'Start free trial'}
               </Button>
             )}
           </div>
@@ -325,68 +320,29 @@ export default function Header() {
                 onClick={() => scrollToSection('features')}
                 className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100"
               >
-                Features
+                {sectionTitles.features}
               </button>
               <button 
                 onClick={() => scrollToSection('how-it-works')}
                 className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100"
               >
-                How It Works
+                {sectionTitles.howItWorks}
               </button>
               <button 
                 onClick={() => scrollToSection('pricing')}
                 className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100"
               >
-                Pricing
+                {sectionTitles.pricing}
               </button>
-              <button 
-                onClick={() => scrollToSection('testimonials')}
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100"
+              
+              {/* Language Toggle - Mobile */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-2 w-full text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
               >
-                Testimonials
+                <Globe className="w-4 h-4" />
+                {isRTL ? 'EN' : 'العربية'}
               </button>
-              <Link 
-                href="/about" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link 
-                href="/faq" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                FAQ
-              </Link>
-              <Link 
-                href="/contact" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Contact
-              </Link>
-              <Link 
-                href="/help" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Help
-              </Link>
-              <Link 
-                href="/privacy" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Privacy Policy
-              </Link>
-              <Link 
-                href="/terms" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 border-b border-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Terms of Service
-              </Link>
             
             {/* Admin Menu Items - Mobile */}
             {isAdmin && (
@@ -517,7 +473,7 @@ export default function Header() {
                     setIsMobileMenuOpen(false);
                   }}
                 >
-                  Start free trial
+                  {currentLanguage === 'ar' ? 'ابدأ تجربة مجانية' : 'Start free trial'}
                 </Button>
               )}
             </div>
