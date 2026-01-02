@@ -73,13 +73,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cairo.variable} font-sans antialiased bg-background text-foreground`}
       >
-        <ErrorBoundary componentName="RootLayout">
+        <ErrorBoundary>
           <LanguageProvider>
             <Providers>
               <Header />
-              <main className="min-h-screen">
-                {children}
-              </main>
+              {children}
               <Toaster />
             </Providers>
           </LanguageProvider>

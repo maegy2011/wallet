@@ -179,7 +179,11 @@ export default function Header() {
             </button>
             <button 
               onClick={() => scrollToSection('how-it-works')}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              style={{ 
+                fontWeight: 600,
+                color: '#4b5563 !important'
+              }}
             >
               {sectionTitles.howItWorks}
             </button>
@@ -324,7 +328,11 @@ export default function Header() {
               </button>
               <button 
                 onClick={() => scrollToSection('how-it-works')}
-                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100"
+                className="block text-gray-600 hover:text-gray-900 transition-colors py-3 text-left w-full border-b border-gray-100 font-medium"
+                style={{ 
+                  fontWeight: 600,
+                  color: '#4b5563 !important'
+                }}
               >
                 {sectionTitles.howItWorks}
               </button>

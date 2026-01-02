@@ -1,401 +1,218 @@
-/**
- * Input validation and sanitization utilities
- * Provides comprehensive validation for all user inputs with security considerations
- */
+import { useState } from 'react';
+import { errorHandler } from './errorHandler';
 
-import { ValidationError, ErrorCodes } from '@/types';
-
-/**
- * Email validation with comprehensive checks
- */
-export class EmailValidator {
-  private static readonly EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  
-  /**
-   * Validate email format and business rules
-   */
-  public static validate(email: string): ValidationError | null {
-    if (!email || typeof email !== 'string') {
-      return {
-        field: 'email',
-        message: 'Email is required',
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    const trimmedEmail = email.trim();
-    
-    if (!trimmedEmail) {
-      return {
-        field: 'email',
-        message: 'Email cannot be empty',
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    if (trimmedEmail.length > 254) { // RFC 5321 limit
-      return {
-        field: 'email',
-        message: 'Email is too long',
-        code: ErrorCodes.INVALID_EMAIL
-      };
-    }
-
-    if (!this.EMAIL_REGEX.test(trimmedEmail)) {
-      return {
-        field: 'email',
-        message: 'Invalid email format',
-        code: ErrorCodes.INVALID_EMAIL
-      };
-    }
-
-    // Additional business rule checks
-    const [localPart, domain] = trimmedEmail.split('@');
-    
-    if (localPart.length > 64) { // RFC 5321 limit
-      return {
-        field: 'email',
-        message: 'Email local part is too long',
-        code: ErrorCodes.INVALID_EMAIL
-      };
-    }
-
-    // Block suspicious domains (example)
-    const blockedDomains = ['tempmail.com', 'throwaway.email'];
-    if (blockedDomains.some(blocked => domain.toLowerCase().endsWith(blocked))) {
-      return {
-        field: 'email',
-        message: 'Disposable email addresses are not allowed',
-        code: ErrorCodes.INVALID_EMAIL
-      };
-    }
-
-    return null; // Valid
-  }
-
-  /**
-   * Sanitize email for storage
-   */
-  public static sanitize(email: string): string {
-    return email.trim().toLowerCase();
-  }
+export interface ValidationRule {
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: RegExp;
+  email?: boolean;
+  phone?: boolean;
+  url?: boolean;
+  custom?: (value: any) => string | null;
 }
 
-/**
- * Password validation with security requirements
- */
-export class PasswordValidator {
-  private static readonly MIN_LENGTH = 8;
-  private static readonly MAX_LENGTH = 128;
-  
-  /**
-   * Validate password strength and format
-   */
-  public static validate(password: string): ValidationError | null {
-    if (!password || typeof password !== 'string') {
-      return {
-        field: 'password',
-        message: 'Password is required',
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    if (password.length < this.MIN_LENGTH) {
-      return {
-        field: 'password',
-        message: `Password must be at least ${this.MIN_LENGTH} characters long`,
-        code: ErrorCodes.WEAK_PASSWORD
-      };
-    }
-
-    if (password.length > this.MAX_LENGTH) {
-      return {
-        field: 'password',
-        message: `Password must be less than ${this.MAX_LENGTH} characters long`,
-        code: ErrorCodes.WEAK_PASSWORD
-      };
-    }
-
-    // Check for common weak passwords
-    const commonPasswords = [
-      'password', '12345678', 'qwerty123', 'admin123', 'letmein',
-      'welcome', 'monkey', 'dragon', 'master', 'sunshine'
-    ];
-    
-    if (commonPasswords.includes(password.toLowerCase())) {
-      return {
-        field: 'password',
-        message: 'Password is too common. Please choose a stronger password',
-        code: ErrorCodes.WEAK_PASSWORD
-      };
-    }
-
-    // Password strength requirements
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const strengthScore = [hasUpperCase, hasLowerCase, hasNumbers, hasSpecialChar]
-      .filter(Boolean).length;
-
-    if (strengthScore < 3) {
-      return {
-        field: 'password',
-        message: 'Password must contain at least 3 of: uppercase letters, lowercase letters, numbers, special characters',
-        code: ErrorCodes.WEAK_PASSWORD
-      };
-    }
-
-    return null; // Valid
-  }
-
-  /**
-   * Check password strength score (0-4)
-   */
-  public static getStrengthScore(password: string): number {
-    let score = 0;
-    
-    if (password.length >= 12) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[a-z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
-    
-    return score;
-  }
-
-  /**
-   * Get password strength description
-   */
-  public static getStrengthDescription(password: string): string {
-    const score = this.getStrengthScore(password);
-    
-    switch (score) {
-      case 0-1: return 'Very Weak';
-      case 2: return 'Weak';
-      case 3: return 'Good';
-      case 4: return 'Strong';
-      case 5: return 'Very Strong';
-      default: return 'Unknown';
-    }
-  }
+export interface ValidationRules {
+  [key: string]: ValidationRule;
 }
 
-/**
- * Name validation with sanitization
- */
-export class NameValidator {
-  private static readonly MIN_LENGTH = 2;
-  private static readonly MAX_LENGTH = 100;
-  
-  /**
-   * Validate name format and content
-   */
-  public static validate(name: string): ValidationError | null {
-    if (!name || typeof name !== 'string') {
-      return {
-        field: 'name',
-        message: 'Name is required',
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    const trimmedName = name.trim();
-    
-    if (!trimmedName) {
-      return {
-        field: 'name',
-        message: 'Name cannot be empty',
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    if (trimmedName.length < this.MIN_LENGTH) {
-      return {
-        field: 'name',
-        message: `Name must be at least ${this.MIN_LENGTH} characters long`,
-        code: ErrorCodes.REQUIRED_FIELD_MISSING
-      };
-    }
-
-    if (trimmedName.length > this.MAX_LENGTH) {
-      return {
-        field: 'name',
-        message: `Name must be less than ${this.MAX_LENGTH} characters long`,
-        code: ErrorCodes.VALIDATION_ERROR
-      };
-    }
-
-    // Allow letters, spaces, hyphens, and apostrophes
-    const nameRegex = /^[a-zA-Z\u0600-\u06FF\s'-]+$/;
-    if (!nameRegex.test(trimmedName)) {
-      return {
-        field: 'name',
-        message: 'Name can only contain letters, spaces, hyphens, and apostrophes',
-        code: ErrorCodes.VALIDATION_ERROR
-      };
-    }
-
-    // Check for suspicious patterns
-    if (/(.)\1{2,}/.test(trimmedName)) { // Repeated characters
-      return {
-        field: 'name',
-        message: 'Name contains invalid character patterns',
-        code: ErrorCodes.VALIDATION_ERROR
-      };
-    }
-
-    return null; // Valid
-  }
-
-  /**
-   * Sanitize name for storage
-   */
-  public static sanitize(name: string): string {
-    return name.trim().replace(/\s+/g, ' '); // Normalize whitespace
-  }
+export interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
 }
 
-/**
- * Comprehensive form validator
- */
 export class FormValidator {
-  /**
-   * Validate authentication credentials
-   */
-  public static validateAuthCredentials(data: {
-    email?: string;
-    password?: string;
-    name?: string;
-    isSignup?: boolean;
-  }): ValidationError[] {
-    const errors: ValidationError[] = [];
+  static validate(data: Record<string, any>, rules: ValidationRules): ValidationResult {
+    const errors: Record<string, string> = {};
 
-    // Validate email
-    if (data.email) {
-      const emailError = EmailValidator.validate(data.email);
-      if (emailError) errors.push(emailError);
-    }
+    for (const [field, rule] of Object.entries(rules)) {
+      const value = data[field];
+      const fieldErrors: string[] = [];
 
-    // Validate password
-    if (data.password) {
-      const passwordError = PasswordValidator.validate(data.password);
-      if (passwordError) errors.push(passwordError);
-    }
+      // Required validation
+      if (rule.required && (value === undefined || value === null || value === '')) {
+        fieldErrors.push(`${field} is required`);
+        continue;
+      }
 
-    // Validate name (only for signup)
-    if (data.isSignup && data.name) {
-      const nameError = NameValidator.validate(data.name);
-      if (nameError) errors.push(nameError);
-    }
+      // Skip other validations if field is empty and not required
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
 
-    return errors;
-  }
+      // Type-specific validations
+      if (typeof value === 'string') {
+        // Min length
+        if (rule.minLength && value.length < rule.minLength) {
+          fieldErrors.push(`${field} must be at least ${rule.minLength} characters long`);
+        }
 
-  /**
-   * Validate that required fields are present
-   */
-  public static validateRequiredFields(
-    data: Record<string, any>,
-    requiredFields: string[]
-  ): ValidationError[] {
-    const errors: ValidationError[] = [];
+        // Max length
+        if (rule.maxLength && value.length > rule.maxLength) {
+          fieldErrors.push(`${field} must not exceed ${rule.maxLength} characters`);
+        }
 
-    for (const field of requiredFields) {
-      if (!data[field] || (typeof data[field] === 'string' && !data[field].trim())) {
-        errors.push({
-          field,
-          message: `${field.charAt(0).toUpperCase() + field.slice(1)} is required`,
-          code: ErrorCodes.REQUIRED_FIELD_MISSING
-        });
+        // Email validation
+        if (rule.email) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value)) {
+            fieldErrors.push(`${field} must be a valid email address`);
+          }
+        }
+
+        // Phone validation
+        if (rule.phone) {
+          const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+          if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
+            fieldErrors.push(`${field} must be a valid phone number`);
+          }
+        }
+
+        // URL validation
+        if (rule.url) {
+          try {
+            new URL(value);
+          } catch {
+            fieldErrors.push(`${field} must be a valid URL`);
+          }
+        }
+
+        // Pattern validation
+        if (rule.pattern && !rule.pattern.test(value)) {
+          fieldErrors.push(`${field} format is invalid`);
+        }
+      }
+
+      // Custom validation
+      if (rule.custom) {
+        const customError = rule.custom(value);
+        if (customError) {
+          fieldErrors.push(customError);
+        }
+      }
+
+      if (fieldErrors.length > 0) {
+        errors[field] = fieldErrors.join(', ');
       }
     }
 
-    return errors;
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
   }
 
-  /**
-   * Sanitize form data
-   */
-  public static sanitizeAuthData(data: {
-    email?: string;
-    password?: string;
-    name?: string;
-  }): {
-    email?: string;
-    password?: string;
-    name?: string;
-  } {
-    const sanitized: any = {};
+  // Common validation rules
+  static rules = {
+    email: {
+      required: true,
+      email: true,
+      maxLength: 255
+    } as ValidationRule,
 
-    if (data.email) {
-      sanitized.email = EmailValidator.sanitize(data.email);
-    }
+    password: {
+      required: true,
+      minLength: 8,
+      maxLength: 128,
+      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      custom: (value: string) => {
+        if (!/(?=.*[a-z])/.test(value)) {
+          return 'Password must contain at least one lowercase letter';
+        }
+        if (!/(?=.*[A-Z])/.test(value)) {
+          return 'Password must contain at least one uppercase letter';
+        }
+        if (!/(?=.*\d)/.test(value)) {
+          return 'Password must contain at least one number';
+        }
+        return null;
+      }
+    } as ValidationRule,
 
-    if (data.password) {
-      // Password is not sanitized (stored as-is after hashing)
-      sanitized.password = data.password;
-    }
+    name: {
+      required: true,
+      minLength: 2,
+      maxLength: 100,
+      pattern: /^[a-zA-Z\s\u0600-\u06FF]+$/
+    } as ValidationRule,
 
-    if (data.name) {
-      sanitized.name = NameValidator.sanitize(data.name);
-    }
+    phone: {
+      required: true,
+      phone: true
+    } as ValidationRule,
 
-    return sanitized;
-  }
+    subject: {
+      required: true,
+      minLength: 3,
+      maxLength: 200
+    } as ValidationRule,
+
+    message: {
+      required: true,
+      minLength: 10,
+      maxLength: 1000
+    } as ValidationRule
+  };
 }
 
-/**
- * Rate limiting utilities
- */
-export class RateLimiter {
-  private static attempts = new Map<string, { count: number; lastAttempt: number }>();
-  
-  /**
-   * Check if rate limit is exceeded
-   */
-  public static isRateLimited(
-    identifier: string,
-    maxAttempts: number = 5,
-    windowMs: number = 15 * 60 * 1000 // 15 minutes
-  ): boolean {
-    const now = Date.now();
-    const record = this.attempts.get(identifier);
+// React hook for form validation
+export function useValidation<T extends Record<string, any>>(
+  initialValues: T,
+  rules: ValidationRules
+) {
+  const [values, setValues] = useState<T>(initialValues);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isValid, setIsValid] = useState(false);
 
-    if (!record) {
-      this.attempts.set(identifier, { count: 1, lastAttempt: now });
-      return false;
+  const validateField = (field: string, value: any) => {
+    const fieldRules = { [field]: rules[field] };
+    const result = FormValidator.validate({ [field]: value }, fieldRules);
+    
+    setErrors(prev => ({
+      ...prev,
+      [field]: result.errors[field] || ''
+    }));
+
+    return !result.errors[field];
+  };
+
+  const validateForm = () => {
+    const result = FormValidator.validate(values, rules);
+    setErrors(result.errors);
+    setIsValid(result.isValid);
+    return result.isValid;
+  };
+
+  const handleChange = (field: string, value: any) => {
+    setValues(prev => ({ ...prev, [field]: value }));
+    
+    if (touched[field]) {
+      validateField(field, value);
     }
+  };
 
-    // Reset if window has passed
-    if (now - record.lastAttempt > windowMs) {
-      this.attempts.set(identifier, { count: 1, lastAttempt: now });
-      return false;
-    }
+  const handleBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, values[field]);
+  };
 
-    // Increment counter
-    record.count++;
-    record.lastAttempt = now;
+  const resetForm = () => {
+    setValues(initialValues);
+    setErrors({});
+    setTouched({});
+    setIsValid(false);
+  };
 
-    return record.count > maxAttempts;
-  }
-
-  /**
-   * Get remaining attempts before rate limit
-   */
-  public static getRemainingAttempts(
-    identifier: string,
-    maxAttempts: number = 5
-  ): number {
-    const record = this.attempts.get(identifier);
-    return record ? Math.max(0, maxAttempts - record.count) : maxAttempts;
-  }
-
-  /**
-   * Clear rate limit for identifier
-   */
-  public static clearRateLimit(identifier: string): void {
-    this.attempts.delete(identifier);
-  }
+  return {
+    values,
+    errors,
+    touched,
+    isValid,
+    handleChange,
+    handleBlur,
+    validateField,
+    validateForm,
+    resetForm
+  };
 }

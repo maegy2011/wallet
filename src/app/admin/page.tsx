@@ -26,6 +26,8 @@ import {
   Filter
 } from 'lucide-react';
 import { ReactNextCaptcha } from '@/components/ReactNextCaptcha';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 interface DashboardStats {
   customers: {
@@ -417,131 +419,120 @@ export default function AdminDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Package className="w-8 h-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Mahfza Admin</CardTitle>
-            <p className="text-gray-600">Sign in to admin dashboard</p>
-          </CardHeader>
-          <CardContent>
-            {!requiresTwoFactor ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                {error && (
-                  <Alert className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-700">{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                    placeholder="admin@mahfza.com"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
-
-                <ReactNextCaptcha
-                  onVerify={handleCaptchaChange}
-                  theme="light"
-                  lang="en"
-                />
-
-                <Button type="submit" className="w-full" disabled={isLoading || !loginForm.captchaId || !loginForm.captchaAnswer}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
-                {error && (
-                  <Alert className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-700">{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Package className="w-8 h-8 text-blue-600" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Package className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-gray-900">Mahfza Admin</CardTitle>
+              <p className="text-gray-600">Sign in to admin dashboard</p>
+            </CardHeader>
+            <CardContent>
+              {!requiresTwoFactor ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  {error && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-700">{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={loginForm.email}
+                      onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                      placeholder="admin@mahfza.com"
+                      required
+                    />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h3>
-                  <p className="text-sm text-gray-600">Enter your 2FA code to continue</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="twoFactorCode">2FA Code</Label>
-                  <Input
-                    id="twoFactorCode"
-                    type="text"
-                    value={loginForm.twoFactorCode}
-                    onChange={(e) => setLoginForm({ ...loginForm, twoFactorCode: e.target.value })}
-                    placeholder="Enter 6-digit code"
-                    maxLength={6}
-                    required
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+
+                  <ReactNextCaptcha
+                    onVerify={handleCaptchaChange}
+                    theme="light"
+                    lang="en"
                   />
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => setRequiresTwoFactor(false)}
-                  >
-                    Back
+
+                  <Button type="submit" className="w-full" disabled={isLoading || !loginForm.captchaId || !loginForm.captchaAnswer}>
+                    {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={isLoading}>
-                    {isLoading ? 'Verifying...' : 'Verify'}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
-        </Card>
+                </form>
+              ) : (
+                <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+                  {error && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-700">{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Package className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h3>
+                    <p className="text-sm text-gray-600">Enter your 2FA code to continue</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="twoFactorCode">2FA Code</Label>
+                    <Input
+                      id="twoFactorCode"
+                      type="text"
+                      value={loginForm.twoFactorCode}
+                      onChange={(e) => setLoginForm({ ...loginForm, twoFactorCode: e.target.value })}
+                      placeholder="Enter 6-digit code"
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => setRequiresTwoFactor(false)}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" className="flex-1" disabled={isLoading}>
+                      {isLoading ? 'Verifying...' : 'Verify'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                <Package className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Mahfza Admin Dashboard</h1>
-            </div>
-            <Button onClick={handleLogout} variant="outline">
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header />
+      
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -1031,7 +1022,10 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
+      
+      <Footer />
     </div>
   );
 }

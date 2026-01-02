@@ -1,48 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, PieChart, Clock, Lock, Check, X, Menu, ChevronDown, Globe, Shield, TrendingUp, FileText, Users, Star } from 'lucide-react';
+import { BookOpen, PieChart, Clock, Lock, TrendingUp, FileText, Check, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LandingPage() {
-  const { data: session } = useSession();
   const router = useRouter();
-  const { isRTL, currentLanguage, toggleLanguage } = useLanguage();
-  const [showCookieConsent, setShowCookieConsent] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isRTL, currentLanguage } = useLanguage();
   const [isAnnualBilling, setIsAnnualBilling] = useState(false);
-
-  // Translated section titles
-  const sectionTitles = {
-    features: currentLanguage === 'ar' ? 'المميزات' : 'Features',
-    howItWorks: currentLanguage === 'ar' ? 'كيف يعمل' : 'How It Works',
-    pricing: currentLanguage === 'ar' ? 'الأسعار' : 'Pricing'
-  };
-
-  useEffect(() => {
-    // Check if user has already consented to cookies
-    const hasConsented = localStorage.getItem('cookie-consent');
-    if (!hasConsented) {
-      setShowCookieConsent(true);
-    }
-  }, []);
-
-  const acceptCookies = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
-    setShowCookieConsent(false);
-  };
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
-    setMobileMenuOpen(false);
   };
 
   return (
@@ -72,14 +46,16 @@ export default function LandingPage() {
                 >
                   {isRTL ? 'ابدأ التجربة المجانية' : 'Start free trial'}
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
-                  onClick={() => scrollToSection('how-it-works')}
-                >
-                  {isRTL ? 'كيف يعمل' : 'How It Works'}
-                </Button>
+                <button
+                onClick={() => scrollToSection('how-it-works')}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-lg font-medium transition-all border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700 px-8 py-4 h-12"
+                style={{ 
+                  fontWeight: 600,
+                  color: '#2563eb !important'
+                }}
+              >
+                {isRTL ? 'كيف يعمل' : 'How It Works'}
+              </button>
               </div>
             </div>
             <div className="relative">
@@ -109,7 +85,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {sectionTitles.features}
+              {isRTL ? 'المميزات' : 'Features'}
             </h2>
             <p className="text-lg text-gray-600">
               {isRTL ? 'أدوات قوية مصممة خصيصًا لاحتياجاتك' : 'Powerful tools designed specifically for your needs'}
@@ -193,7 +169,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {sectionTitles.howItWorks}
+              {isRTL ? 'كيف يعمل' : 'How It Works'}
             </h2>
             <p className="text-lg text-gray-600">
               {isRTL ? 'ابدأ في دقائق قليلة' : 'Get started in minutes'}
@@ -273,29 +249,39 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {sectionTitles.pricing}
+              {isRTL ? 'الأسعار' : 'Pricing'}
             </h2>
             <p className="text-lg text-gray-600 mb-8">
               {isRTL ? 'اختر الخطة التي تناسب احتياجاتك' : 'Choose the plan that fits your needs'}
             </p>
             
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4">
-              <span className={`text-sm font-medium ${!isAnnualBilling ? 'text-blue-600' : 'text-gray-600'}`}>
+            <div className={`flex items-center justify-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className={`text-sm font-medium transition-colors ${
+                !isAnnualBilling ? 'text-blue-600' : 'text-gray-600'
+              }`}>
                 {isRTL ? 'شهري' : 'Monthly'}
               </span>
               <button
                 onClick={() => setIsAnnualBilling(!isAnnualBilling)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  isAnnualBilling ? 'bg-green-600' : 'bg-blue-600'
+                }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isAnnualBilling ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
+                    // For LTR (English): translate-x works left-to-right as expected
+                    // For RTL (Arabic): we need to reverse the logic
+                    isRTL 
+                      ? (isAnnualBilling ? '-translate-x-6' : '-translate-x-1')  // RTL: move from right to left
+                      : (isAnnualBilling ? 'translate-x-6' : 'translate-x-1')   // LTR: move from left to right
                   }`}
                 />
               </button>
-              <span className={`text-sm font-medium ${isAnnualBilling ? 'text-blue-600' : 'text-gray-600'}`}>
-                {isRTL ? 'سنوي (وفر 17%)' : 'Annual (Save 17%)'}
+              <span className={`text-sm font-medium transition-colors ${
+                isAnnualBilling ? 'text-green-600' : 'text-gray-600'
+              }`}>
+                {isRTL ? 'سنوي (وفر 220 جنيه)' : 'Annual (Save 220 EGP)'}
               </span>
             </div>
           </div>
@@ -355,22 +341,27 @@ export default function LandingPage() {
                   </h3>
                   <div className="mb-2">
                     <div className="text-4xl font-bold text-blue-600">
-                      {isAnnualBilling ? '500' : '60'} {isRTL ? 'جنيه مصري' : 'EGP'}
+                      {isAnnualBilling ? '500' : '60'} {isRTL ? 'جنيه' : 'EGP'}
+                      {isAnnualBilling && (
+                        <span className="text-lg font-normal text-gray-400 line-through ml-2">
+                          720 {isRTL ? 'جنيه' : 'EGP'}
+                        </span>
+                      )}
                     </div>
                     <div className="text-lg text-gray-600">
                       {isAnnualBilling ? 
-                        (isRTL ? '/سنة' : '/year') : 
-                        (isRTL ? '/شهر' : '/month')
+                        (isRTL ? 'سنوياً' : '/year') : 
+                        (isRTL ? 'شهرياً' : '/month')
                       }
                     </div>
+                    {isAnnualBilling && (
+                      <div className="mt-2 text-sm text-green-600 font-semibold">
+                        {isRTL ? 'توفير 220 جنيه سنوياً (27%)' : 'Save 220 EGP yearly (27%)'}
+                      </div>
+                    )}
                   </div>
-                  {isAnnualBilling && (
-                    <div className="text-sm text-green-600 font-medium mb-2">
-                      {isRTL ? 'توفير 220 جنيه مصري سنويًا' : 'Save 220 EGP annually'}
-                    </div>
-                  )}
                   <p className="text-gray-600">
-                    {isRTL ? 'للمحترفين والنمو' : 'For professionals and growth'}
+                    {isRTL ? 'للمحترفين والشركات' : 'For professionals and businesses'}
                   </p>
                 </div>
 
@@ -378,174 +369,32 @@ export default function LandingPage() {
                   <li className="flex items-center gap-3">
                     <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                     <span className="text-gray-700">
-                      {isRTL ? 'محافظ غير محدودة' : 'Unlimited wallets'}
+                      {isRTL ? 'تتبع غير محدود للمحافظ' : 'Unlimited wallet tracking'}
                     </span>
                   </li>
                   <li className="flex items-center gap-3">
                     <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                     <span className="text-gray-700">
-                      {isRTL ? 'جميع الميزات (تقارير متقدمة، سجل المعاملات، نظرة عامة على المحفظة)' : 'All features (advanced reports, transaction history, portfolio overview)'}
+                      {isRTL ? 'تقارير متقدمة وتحليلات' : 'Advanced reports and analytics'}
                     </span>
                   </li>
                   <li className="flex items-center gap-3">
                     <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                     <span className="text-gray-700">
-                      {isRTL ? 'دعم أولوي' : 'Priority support'}
+                      {isRTL ? 'تصدير البيانات (CSV, PDF)' : 'Data export (CSV, PDF)'}
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span className="text-gray-700">
+                      {isRTL ? 'دعم فني مخصص' : 'Priority customer support'}
                     </span>
                   </li>
                 </ul>
 
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg">
-                  {isRTL ? 'ترقية الآن' : 'Upgrade Now'}
+                  {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Comparison Table */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'محفظة مجانية مقابل محفظة برو' : 'Mahfza Free vs. Mahfza Pro'}
-            </h2>
-            <p className="text-lg text-gray-600">
-              {isRTL ? 'اختر الخطة المناسبة لاحتياجاتك' : 'Choose the right plan for your needs'}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-blue-600 text-white">
-                <tr>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    {isRTL ? 'الميزة' : 'Feature'}
-                  </th>
-                  <th className="px-6 py-4 text-center font-semibold">
-                    {isRTL ? 'محفظة مجانية' : 'Mahfza Free'}
-                  </th>
-                  <th className="px-6 py-4 text-center font-semibold">
-                    {isRTL ? 'محفظة برو' : 'Mahfza Pro'}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'السعر' : 'Price'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-green-600 font-semibold">{isRTL ? 'مجاني' : 'Free'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div>
-                      <span className="text-blue-600 font-semibold">
-                        {isAnnualBilling ? '500' : '60'} {isRTL ? 'جنيه' : 'EGP'}
-                      </span>
-                      <div className="text-xs text-gray-600">
-                        {isAnnualBilling ? 
-                          (isRTL ? '/سنة' : '/year') : 
-                          (isRTL ? '/شهر' : '/month')
-                        }
-                      </div>
-                      {isAnnualBilling && (
-                        <div className="text-xs text-green-600">
-                          {isRTL ? 'وفر 220 جنيه سنويًا' : 'Save 220 EGP annually'}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'عدد المحافظ' : 'Number of Wallets'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-gray-700">2</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-green-600 font-semibold">{isRTL ? 'غير محدود' : 'Unlimited'}</span>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'تتبع الرصيد اليدوي' : 'Manual Balance Tracking'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'التقارير الأساسية' : 'Basic Reports'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'التقارير المتقدمة' : 'Advanced Reports'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <X className="w-6 h-6 text-red-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'سجل المعاملات' : 'Transaction History'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <X className="w-6 h-6 text-red-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'نظرة عامة على المحفظة' : 'Portfolio Overview'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <X className="w-6 h-6 text-red-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'تشفير البيانات الآمن' : 'Secure Data Encryption'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {isRTL ? 'دعم أولوي' : 'Priority Support'}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <X className="w-6 h-6 text-red-500 mx-auto" />
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Check className="w-6 h-6 text-green-500 mx-auto" />
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -562,95 +411,149 @@ export default function LandingPage() {
             }
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            {isRTL ? 
-              'انضم إلى آلاف الوسطاء الذين يثقون في محفظة' :
-              'Join thousands of brokers who trust Mahfza'
+            {isRTL ?
+              'انضم إلى آلاف الوسطاء الذين يثقون في محفظة لإدارة أرصدتهم' :
+              'Join thousands of brokers who trust Mahfza to manage their balances'
             }
           </p>
-          <Button 
-            size="lg" 
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg"
-            onClick={() => router.push('/signup')}
-          >
-            {isRTL ? 'ابدأ التجربة المجانية' : 'Start free trial'}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              size="lg" 
+              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg"
+              onClick={() => router.push('/signup')}
+            >
+              {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
+            </Button>
+            <button
+              onClick={() => scrollToSection('features')}
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-lg font-medium transition-all border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 h-12"
+              style={{ 
+                fontWeight: 600,
+                color: '#ffffff !important'
+              }}
+            >
+              {isRTL ? 'تعلم المزيد' : 'Learn More'}
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">{isRTL ? 'محفظة' : 'Mahfza'}</span>
+                <span className="text-xl font-bold">Mahfza | محفظة</span>
               </div>
-              <p className="text-gray-400 text-sm">
-                {isRTL ? 
-                  'طريقة بسيطة وآمنة لتتبع محفظتك المالية.' :
-                  'A simple, secure way to track your financial portfolio.'
+              <p className="text-gray-400 mb-4">
+                {isRTL ?
+                  'منصة بسيطة وآمنة للوسطاء لتتبع أرصدتهم ومعاملاتهم وأداء محافظهم يدويًا.' :
+                  'A simple, secure platform for brokers to manually track their balances, transactions, and portfolio performance.'
                 }
               </p>
             </div>
-
+            
             <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'الشركة' : 'Company'}
+              <h3 className="text-lg font-semibold mb-4">
+                {isRTL ? 'المنتج' : 'Product'}
               </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
+              <ul className="space-y-2">
                 <li>
-                  <Link href="/about" className="hover:text-white transition-colors">
-                    {isRTL ? 'من نحن' : 'About Us'}
-                  </Link>
+                  <button 
+                    onClick={() => scrollToSection('features')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    {isRTL ? 'المميزات' : 'Features'}
+                  </button>
                 </li>
                 <li>
-                  <Link href="/faq" className="hover:text-white transition-colors">
+                  <button 
+                    onClick={() => scrollToSection('how-it-works')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    {isRTL ? 'كيف يعمل' : 'How It Works'}
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => scrollToSection('pricing')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    {isRTL ? 'الأسعار' : 'Pricing'}
+                  </button>
+                </li>
+                <li>
+                  <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+                    {isRTL ? 'من نحن' : 'About'}
+                  </a>
+                </li>
+                <li>
+                  <a href="/help" className="text-gray-400 hover:text-white transition-colors">
+                    {isRTL ? 'المساعدة' : 'Help'}
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">
+                {isRTL ? 'الدعم' : 'Support'}
+              </h3>
+              <ul className="space-y-2">
+                <li>
+                  <a href="/faq" className="text-gray-400 hover:text-white transition-colors">
                     {isRTL ? 'الأسئلة الشائعة' : 'FAQ'}
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link href="/contact" className="hover:text-white transition-colors">
-                    {isRTL ? 'اتصل بنا' : 'Contact'}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'قانوني' : 'Legal'}
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <Link href="/privacy" className="hover:text-white transition-colors">
+                  <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                     {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link href="/terms" className="hover:text-white transition-colors">
+                  <a href="/terms" className="text-gray-400 hover:text-white transition-colors">
                     {isRTL ? 'شروط الخدمة' : 'Terms of Service'}
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </div>
-
+            
             <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'تابعنا' : 'Follow Us'}
+              <h3 className="text-lg font-semibold mb-4">
+                {isRTL ? 'تواصل معنا' : 'Contact'}
               </h3>
-              <div className="flex gap-3">
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">in</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">𝕏</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">📷</span>
-                </button>
+              <ul className="space-y-2 text-gray-400">
+                <li>
+                  <a href="mailto:support@mahfza.com" className="hover:text-white transition-colors">
+                    support@mahfza.com
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+20123456789" className="hover:text-white transition-colors">
+                    {isRTL ? '+20 123 456 789' : '+20 123 456 789'}
+                  </a>
+                </li>
+              </ul>
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  {isRTL ? 'تابعنا' : 'Follow Us'}
+                </h3>
+                <div className="flex gap-3">
+                  <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
+                    <span className="text-sm">in</span>
+                  </button>
+                  <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
+                    <span className="text-sm">𝕏</span>
+                  </button>
+                  <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
+                    <span className="text-sm">📷</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

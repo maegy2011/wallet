@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, Globe, ArrowRight, Shield, Eye, Database, Lock, UserCheck, AlertCircle } from 'lucide-react';
+import { Shield, Eye, Database, Lock, UserCheck, AlertCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function PrivacyPage() {
   const router = useRouter();
@@ -81,7 +82,10 @@ export default function PrivacyPage() {
   ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b from-blue-50 to-white ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <Header />
+      
+      <main className="flex-1">
       {/* Hero Section */}
       <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
@@ -227,100 +231,9 @@ export default function PrivacyPage() {
           </Button>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">Mahfza | محفظة</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                {isRTL ? 
-                  'طريقة بسيطة وآمنة لتتبع محفظتك المالية.' :
-                  'A simple, secure way to track your financial portfolio.'
-                }
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'المنتج' : 'Product'}
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <Link href="/features" className="hover:text-white transition-colors">
-                    {isRTL ? 'المميزات' : 'Features'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/pricing" className="hover:text-white transition-colors">
-                    {isRTL ? 'الأسعار' : 'Pricing'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/about" className="hover:text-white transition-colors">
-                    {isRTL ? 'من نحن' : 'About'}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'الدعم' : 'Support'}
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <Link href="/faq" className="hover:text-white transition-colors">
-                    {isRTL ? 'الأسئلة الشائعة' : 'FAQ'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-white transition-colors">
-                    {isRTL ? 'تواصل معنا' : 'Contact'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="hover:text-white transition-colors">
-                    {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-white transition-colors">
-                    {isRTL ? 'شروط الخدمة' : 'Terms of Service'}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'تابعنا' : 'Follow Us'}
-              </h3>
-              <div className="flex gap-3">
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">in</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">𝕏</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">📷</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-            <p>© 2025 Mahfza. {isRTL ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}</p>
-          </div>
-        </div>
-      </footer>
+      </main>
+      
+      <Footer />
     </div>
   );
 }

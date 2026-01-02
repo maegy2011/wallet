@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, Globe, ChevronDown, ChevronUp, ArrowRight, HelpCircle, CreditCard, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowRight, HelpCircle, CreditCard, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function FAQPage() {
   const router = useRouter();
@@ -144,233 +145,145 @@ export default function FAQPage() {
   ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b from-blue-50 to-white ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+    <div className={`min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <Header />
+      
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                {isRTL ? 
+                  'الأسئلة الشائعة' :
+                  'Frequently Asked Questions'
+                }
+              </h1>
+              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+                {isRTL ? 
+                  'كل ما تحتاج لمعرفته حول محفظة - من البدء إلى الميزات المتقدمة' :
+                  'Everything you need to know about Mahfza - from getting started to advanced features'
+                }
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
+                  onClick={() => router.push('/signup')}
+                >
+                  {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
+                  <ArrowRight className={`w-5 h-5 ml-2 ${isRTL ? 'rotate-180' : ''}`} />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
+                  onClick={() => router.push('/contact')}
+                >
+                  {isRTL ? 'اسأل سؤالاً' : 'Ask a Question'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Categories */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            {faqCategories.map((category, categoryIndex) => {
+              const Icon = category.icon;
+              return (
+                <div key={categoryIndex} className="mb-12">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      {category.title[isRTL ? 'ar' : 'en']}
+                    </h2>
+                  </div>
+
+                  <div className="space-y-4">
+                    {category.items.map((item, itemIndex) => {
+                      const isOpen = openItems.includes(categoryIndex * 100 + itemIndex);
+                      const globalIndex = categoryIndex * 100 + itemIndex;
+                      
+                      return (
+                        <Card key={itemIndex} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                          <CardContent className="p-0">
+                            <button
+                              onClick={() => toggleItem(globalIndex)}
+                              className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                            >
+                              <h3 className="text-lg font-semibold text-gray-900 pr-4">
+                                {item.question[isRTL ? 'ar' : 'en']}
+                              </h3>
+                              <div className="flex-shrink-0">
+                                {isOpen ? (
+                                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                                )}
+                              </div>
+                            </button>
+                            
+                            {isOpen && (
+                              <div className="px-6 pb-4">
+                                <div className="border-t border-gray-100 pt-4">
+                                  <p className="text-gray-600 leading-relaxed">
+                                    {item.answer[isRTL ? 'ar' : 'en']}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Still Have Questions Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               {isRTL ? 
-                'الأسئلة الشائعة' :
-                'Frequently Asked Questions'
+                'هل لا تزال لديك أسئلة؟' :
+                'Still Have Questions?'
               }
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            </h2>
+            <p className="text-xl text-gray-600 mb-8">
               {isRTL ? 
-                'كل ما تحتاج لمعرفته حول محفظة - من البدء إلى الميزات المتقدمة' :
-                'Everything you need to know about Mahfza - from getting started to advanced features'
+                'فريق الدعم الخاص بنا هنا لمساعدتك' :
+                'Our support team is here to help'
               }
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
-                onClick={() => router.push('/signup')}
+                onClick={() => router.push('/contact')}
               >
-                {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
-                <ArrowRight className={`w-5 h-5 ml-2 ${isRTL ? 'rotate-180' : ''}`} />
+                {isRTL ? 'تواصل معنا' : 'Contact Support'}
               </Button>
               <Button 
                 size="lg" 
                 variant="outline"
                 className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
-                onClick={() => router.push('/contact')}
+                onClick={() => router.push('/signup')}
               >
-                {isRTL ? 'اسأل سؤالاً' : 'Ask a Question'}
+                {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
               </Button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* FAQ Categories */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {faqCategories.map((category, categoryIndex) => {
-            const Icon = category.icon;
-            return (
-              <div key={categoryIndex} className="mb-12">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {category.title[isRTL ? 'ar' : 'en']}
-                  </h2>
-                </div>
-
-                <div className="space-y-4">
-                  {category.items.map((item, itemIndex) => {
-                    const isOpen = openItems.includes(categoryIndex * 100 + itemIndex);
-                    const globalIndex = categoryIndex * 100 + itemIndex;
-                    
-                    return (
-                      <Card key={itemIndex} className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                        <CardContent className="p-0">
-                          <button
-                            onClick={() => toggleItem(globalIndex)}
-                            className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-                          >
-                            <h3 className="text-lg font-semibold text-gray-900 pr-4">
-                              {item.question[isRTL ? 'ar' : 'en']}
-                            </h3>
-                            <div className="flex-shrink-0">
-                              {isOpen ? (
-                                <ChevronUp className="w-5 h-5 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="w-5 h-5 text-gray-500" />
-                              )}
-                            </div>
-                          </button>
-                          
-                          {isOpen && (
-                            <div className="px-6 pb-4">
-                              <div className="border-t border-gray-100 pt-4">
-                                <p className="text-gray-600 leading-relaxed">
-                                  {item.answer[isRTL ? 'ar' : 'en']}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Still Have Questions Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            {isRTL ? 
-              'هل لا تزال لديك أسئلة؟' :
-              'Still Have Questions?'
-            }
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            {isRTL ? 
-              'فريق الدعم الخاص بنا هنا لمساعدتك' :
-              'Our support team is here to help'
-            }
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
-              onClick={() => router.push('/contact')}
-            >
-              {isRTL ? 'تواصل معنا' : 'Contact Support'}
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg"
-              onClick={() => router.push('/signup')}
-            >
-              {isRTL ? 'ابدأ التجربة المجانية' : 'Start Free Trial'}
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">Mahfza | محفظة</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                {isRTL ? 
-                  'طريقة بسيطة وآمنة لتتبع محفظتك المالية.' :
-                  'A simple, secure way to track your financial portfolio.'
-                }
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'المنتج' : 'Product'}
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <Link href="/features" className="hover:text-white transition-colors">
-                    {isRTL ? 'المميزات' : 'Features'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/pricing" className="hover:text-white transition-colors">
-                    {isRTL ? 'الأسعار' : 'Pricing'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/about" className="hover:text-white transition-colors">
-                    {isRTL ? 'من نحن' : 'About'}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'الدعم' : 'Support'}
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <Link href="/faq" className="hover:text-white transition-colors">
-                    {isRTL ? 'الأسئلة الشائعة' : 'FAQ'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-white transition-colors">
-                    {isRTL ? 'تواصل معنا' : 'Contact'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="hover:text-white transition-colors">
-                    {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-white transition-colors">
-                    {isRTL ? 'شروط الخدمة' : 'Terms of Service'}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">
-                {isRTL ? 'تابعنا' : 'Follow Us'}
-              </h3>
-              <div className="flex gap-3">
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">in</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">𝕏</span>
-                </button>
-                <button className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="text-sm">📷</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-            <p>© 2025 Mahfza. {isRTL ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}</p>
-          </div>
-        </div>
-      </footer>
+        </section>
+      </main>
+      
+      <Footer />
     </div>
   );
 }
