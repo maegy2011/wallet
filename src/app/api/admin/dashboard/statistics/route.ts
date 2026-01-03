@@ -22,7 +22,7 @@ export const GET = withAdminAuth(async (request: NextRequest, admin) => {
     ] = await Promise.all([
       db.customer.count(),
       db.customer.count({ where: { status: 'ACTIVE' } }),
-      db.customer.count({ where: { status: 'INACTIVE' } }),
+      db.customer.count({ where: { status: 'DISABLED' } }),
       db.customer.count({
         where: {
           createdAt: { gte: thirtyDaysAgo },
@@ -163,103 +163,103 @@ export const GET = withAdminAuth(async (request: NextRequest, admin) => {
       take: 5,
     });
 
-    // Recent activities
-    const recentActivities = await db.auditLog.findMany({
-      include: {
-        admin: {
-          select: {
-            name: true,
-            email: true,
-          }
-        }
-      },
-      orderBy: { timestamp: 'desc' },
-      take: 10,
-    });
-
-    const statistics = {
-      // Customer Statistics (لوحة العملاء)
-      customers: {
-        total: totalCustomers,
-        active: activeCustomers,
-        inactive: inactiveCustomers,
-        newThisMonth: newCustomersThisMonth,
-        growthRate: totalCustomers > 0 ? (newCustomersThisMonth / totalCustomers) * 100 : 0,
-      },
-
-      // Financial Statistics (لوحة المالية)
-      financial: {
-        totalInvoices: totalInvoices,
-        totalInvoiceValue: totalInvoiceValue._sum.total || 0,
-        paidInvoices: paidInvoices,
-        paidInvoiceValue: paidInvoiceValue._sum.total || 0,
-        overdueInvoices: overdueInvoices,
-        overdueInvoiceValue: overdueInvoiceValue._sum.total || 0,
-        invoicesThisMonth: invoicesThisMonth,
-        collectionRate: totalInvoices > 0 ? (paidInvoices / totalInvoices) * 100 : 0,
-      },
-
-      // Subscription Statistics (لوحة الاشتراكات)
-      subscriptions: {
-        total: totalSubscriptions,
-        trial: trialSubscriptions,
-        active: activeSubscriptions,
-        expired: expiredSubscriptions,
-        cancelled: cancelledSubscriptions,
-        newThisMonth: newSubscriptionsThisMonth,
-        conversionRate: trialSubscriptions > 0 ? (activeSubscriptions / (trialSubscriptions + activeSubscriptions)) * 100 : 0,
-      },
-
-      // Package Statistics
-      packages: {
-        free: packageStats.find(p => p.type === 'FREE' && p.status === 'ACTIVE')?._count || 0,
-        paid: packageStats.find(p => p.type === 'PAID' && p.status === 'ACTIVE')?._count || 0,
-        inactive: packageStats.filter(p => p.status === 'INACTIVE').reduce((sum, p) => sum + p._count, 0),
-        topPerforming: topPackages.map(pkg => ({
-          id: pkg.id,
-          name: pkg.name,
-          type: pkg.type,
-          subscribers: pkg._count.subscriptions,
-        })),
-      },
-
-      // System Activity Statistics (لوحة النظام)
-      system: {
-        totalLogins: totalLogins,
-        recentLogins: recentLogins,
-        totalAuditLogs: totalAuditLogs,
-        recentAuditLogs: recentAuditLogs,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage(),
-      },
-
-      // Trends and Analytics
-      trends: {
-        monthlyRevenue: monthlyRevenue.map(item => ({
-          month: item.month,
-          revenue: Number(item.revenue),
-          invoiceCount: Number(item.invoiceCount),
-        })),
-        customerGrowth: customerGrowth.map(item => ({
-          month: item.month,
-          newCustomers: Number(item.newCustomers),
-        })),
-      },
-
       // Recent Activities
-      recentActivities: recentActivities.map(log => ({
-        id: log.id,
-        action: log.action,
-        resource: log.resource,
-        timestamp: log.timestamp,
-        admin: log.admin.name,
-        details: {
-          resourceId: log.resourceId,
-          oldValues: log.oldValues ? JSON.parse(log.oldValues) : null,
-          newValues: log.newValues ? JSON.parse(log.newValues) : null,
+      const recentActivities = await db.auditLog.findMany({
+        include: {
+          admin: {
+            select: {
+              email: true,
+              role: true,
+            }
+          }
         },
-      })),
-    };
+        orderBy: { timestamp: 'desc' },
+        take: 10,
+      });
+
+      const statistics = {
+        // Customer Statistics (لوحة العملاء)
+        customers: {
+          total: totalCustomers,
+          active: activeCustomers,
+          inactive: inactiveCustomers,
+          newThisMonth: newCustomersThisMonth,
+          growthRate: totalCustomers > 0 ? (newCustomersThisMonth / totalCustomers) * 100 : 0,
+        },
+
+        // Financial Statistics (لوحة المالية)
+        financial: {
+          totalInvoices: totalInvoices,
+          totalInvoiceValue: totalInvoiceValue._sum.total || 0,
+          paidInvoices: paidInvoices,
+          paidInvoiceValue: paidInvoiceValue._sum.total || 0,
+          overdueInvoices: overdueInvoices,
+          overdueInvoiceValue: overdueInvoiceValue._sum.total || 0,
+          invoicesThisMonth: invoicesThisMonth,
+          collectionRate: totalInvoices > 0 ? (paidInvoices / totalInvoices) * 100 : 0,
+        },
+
+        // Subscription Statistics (لوحة الاشتراكات)
+        subscriptions: {
+          total: totalSubscriptions,
+          trial: trialSubscriptions,
+          active: activeSubscriptions,
+          expired: expiredSubscriptions,
+          cancelled: cancelledSubscriptions,
+          newThisMonth: newSubscriptionsThisMonth,
+          conversionRate: trialSubscriptions > 0 ? (activeSubscriptions / (trialSubscriptions + activeSubscriptions)) * 100 : 0,
+        },
+
+        // Package Statistics
+        packages: {
+          free: packageStats.find(p => p.type === 'FREE' && p.status === 'ACTIVE')?._count || 0,
+          paid: packageStats.find(p => p.type === 'PAID' && p.status === 'ACTIVE')?._count || 0,
+          inactive: packageStats.filter(p => p.status === 'INACTIVE').reduce((sum, p) => sum + p._count, 0),
+          topPerforming: topPackages.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            type: pkg.type,
+            subscribers: pkg._count.subscriptions,
+          })),
+        },
+
+        // System Activity Statistics (لوحة النظام)
+        system: {
+          totalLogins: totalLogins,
+          recentLogins: recentLogins,
+          totalAuditLogs: totalAuditLogs,
+          recentAuditLogs: recentAuditLogs,
+          uptime: process.uptime(),
+          memoryUsage: process.memoryUsage(),
+        },
+
+        // Trends and Analytics
+        trends: {
+          monthlyRevenue: monthlyRevenue.map(item => ({
+            month: item.month,
+            revenue: Number(item.revenue),
+            invoiceCount: Number(item.invoiceCount),
+          })),
+          customerGrowth: customerGrowth.map(item => ({
+            month: item.month,
+            newCustomers: Number(item.newCustomers),
+          })),
+        },
+
+        // Recent Activities
+        recentActivities: recentActivities.map(log => ({
+          id: log.id,
+          action: log.action,
+          entityType: log.entityType,
+          timestamp: log.timestamp,
+          admin: log.admin.email,
+          details: {
+            entityId: log.entityId,
+            oldValue: log.oldValue ? JSON.parse(log.oldValue) : null,
+            newValue: log.newValue ? JSON.parse(log.newValue) : null,
+          },
+        })),
+      };
 
     // Log dashboard access
     await AdminMiddleware.logAction(
@@ -282,7 +282,7 @@ export const GET = withAdminAuth(async (request: NextRequest, admin) => {
       data: statistics,
       meta: {
         timestamp: new Date().toISOString(),
-        generatedBy: admin.name,
+        generatedBy: admin.email,
       },
     });
 

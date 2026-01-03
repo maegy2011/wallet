@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
       data: {
         admin: {
           email: superAdmin.email,
-          name: superAdmin.name,
           role: superAdmin.role,
         },
         password: superAdminPassword,

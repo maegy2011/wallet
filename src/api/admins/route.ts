@@ -1,30 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { AdminAuthService } from '@/lib/admin-auth';
-import { ErrorLogger, ValidationError, AuthenticationError, ConflictError } from '@/lib/errors';
-import { AuditLog, AdminRole } from '@prisma/client';
+import { ErrorLogger, ValidationError, AuthenticationError } from '@/lib/errors';
 
 /**
- * POST /api/admin/auth/login
- * Admin login with email, password, captcha, and optional 2FA
+ * POST /api/admins/login
+ * Authenticate admin using credentials
  */
 export async function POST(request: NextRequest) {
-  let body: any = {};
-  let requestError: any = null;
-  
   try {
-    try {
-      body = await request.json();
-    } catch (parseError) {
-      requestError = parseError;
-      throw new ValidationError('Invalid JSON in request body');
-    }
-    
-    const { email, password, captchaId, captchaAnswer, twoFactorCode } = body;
+    const body = await request.json();
+    const { email, password, captchaId, captchaAnswer } = body;
 
-    // Validate required fields
-    if (!email || !password || !captchaId || !captchaAnswer) {
-      throw new ValidationError('Email, password, captcha ID, and captcha answer are required');
+    // Validation
+    if (!email || !password) {
+      throw new ValidationError('Email and password are required');
     }
 
     // Validate email format
@@ -33,9 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify captcha
-    console.log('Verifying captcha:', { captchaId, captchaAnswer });
     const isCaptchaValid = await AdminAuthService.verifyCaptchaToken(captchaId, captchaAnswer);
-    console.log('Captcha valid:', isCaptchaValid);
     if (!isCaptchaValid) {
       throw new ValidationError('Invalid captcha answer');
     }
@@ -72,30 +60,6 @@ export async function POST(request: NextRequest) {
       });
 
       throw new AuthenticationError('Invalid credentials');
-    }
-
-    // Check 2FA if enabled
-    if (admin.twoFactorEnabled && !twoFactorCode) {
-      return NextResponse.json({
-        success: true,
-        requiresTwoFactor: true,
-        message: 'Two-factor authentication code required',
-      });
-    }
-
-    if (admin.twoFactorEnabled && twoFactorCode) {
-      if (!admin.twoFactorSecret) {
-        throw new AuthenticationError('Two-factor authentication is not properly configured');
-      }
-
-      const isTwoFactorValid = AdminAuthService.verifyTwoFactorToken(
-        admin.twoFactorSecret,
-        twoFactorCode
-      );
-
-      if (!isTwoFactorValid) {
-        throw new AuthenticationError('Invalid two-factor authentication code');
-      }
     }
 
     // Reset login attempts on successful login
@@ -144,19 +108,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     ErrorLogger.log(error instanceof Error ? error : new Error('Admin login failed'), {
-      endpoint: '/api/admin/auth/login',
-      email: body.email?.toLowerCase() || (requestError ? 'parse-error' : 'unknown'),
+      endpoint: '/api/admins/login',
+      email: body?.email || 'unknown',
     });
 
     if (error instanceof ValidationError || 
-        error instanceof AuthenticationError || 
-        error instanceof ConflictError) {
+        error instanceof AuthenticationError) {
       return NextResponse.json({
         success: false,
         error: {
-          code: error instanceof ValidationError ? 'VALIDATION_ERROR' : 
-                error instanceof AuthenticationError ? 'AUTHENTICATION_ERROR' : 
-                'CONFLICT_ERROR',
+          code: error instanceof ValidationError ? 'VALIDATION_ERROR' : 'AUTHENTICATION_ERROR',
           message: error.message,
         },
       }, { status: error instanceof ValidationError ? 400 : 401 });
@@ -167,6 +128,144 @@ export async function POST(request: NextRequest) {
       error: {
         code: 'INTERNAL_SERVER_ERROR',
         message: 'An unexpected error occurred',
+      },
+    }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admins/logout
+ * Log out admin
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Authorization header required',
+        },
+      }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    const adminData = AdminAuthService.verifyToken(token);
+
+    if (!adminData) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: 'Invalid token',
+        },
+      }, { status: 401 });
+    }
+
+    // Log logout
+    await logAdminAction(adminData.id, 'LOGOUT', 'ADMIN', adminData.id, {
+      ipAddress: request.ip,
+      userAgent: request.headers.get('user-agent'),
+    });
+
+    ErrorLogger.info('Admin logout successful', {
+      adminId: adminData.id,
+      email: adminData.email,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+
+  } catch (error) {
+    ErrorLogger.log(error instanceof Error ? error : new Error('Admin logout failed'), {
+      endpoint: '/api/admins/logout',
+    });
+
+    return NextResponse.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to logout',
+      },
+    }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/admins/me
+ * Get current admin details
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Authorization header required',
+        },
+      }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    const adminData = AdminAuthService.verifyToken(token);
+
+    if (!adminData) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: 'Invalid token',
+        },
+      }, { status: 401 });
+    }
+
+    // Get full admin details
+    const admin = await db.admin.findUnique({
+      where: { id: adminData.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        twoFactorEnabled: true,
+        isActive: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!admin) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Admin not found',
+        },
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: admin,
+    });
+
+  } catch (error) {
+    ErrorLogger.log(error instanceof Error ? error : new Error('Failed to get admin details'), {
+      endpoint: '/api/admins/me',
+    });
+
+    return NextResponse.json({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get admin details',
       },
     }, { status: 500 });
   }

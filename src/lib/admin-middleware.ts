@@ -11,7 +11,6 @@ import { AuthenticationError, AuthorizationError } from '@/lib/errors';
 export interface AdminContext {
   id: string;
   email: string;
-  name: string;
   role: 'SUPER_ADMIN' | 'ADMIN';
   twoFactorEnabled: boolean;
 }
@@ -38,7 +37,6 @@ export class AdminMiddleware {
       select: {
         id: true,
         email: true,
-        name: true,
         role: true,
         isActive: true,
         twoFactorEnabled: true,
@@ -52,7 +50,6 @@ export class AdminMiddleware {
     return {
       id: admin.id,
       email: admin.email,
-      name: admin.name,
       role: admin.role,
       twoFactorEnabled: admin.twoFactorEnabled,
     };
@@ -136,8 +133,8 @@ export class AdminMiddleware {
   static async logAction(
     adminId: string,
     action: string,
-    resource: string,
-    resourceId?: string,
+    entityType: string,
+    entityId?: string,
     oldValues?: any,
     newValues?: any,
     metadata?: {
@@ -150,10 +147,10 @@ export class AdminMiddleware {
         data: {
           adminId,
           action,
-          resource,
-          resourceId,
-          oldValues: oldValues ? JSON.stringify(oldValues) : null,
-          newValues: newValues ? JSON.stringify(newValues) : null,
+          entityType,
+          entityId,
+          oldValue: oldValues ? JSON.stringify(oldValues) : null,
+          newValue: newValues ? JSON.stringify(newValues) : null,
           ipAddress: metadata?.ipAddress,
           userAgent: metadata?.userAgent,
         },

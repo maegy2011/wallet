@@ -13,20 +13,235 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Admin Management
+model Admin {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  role             AdminRole @default(ADMIN)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  isActive         Boolean   @default(true)
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  // Relations
+  auditLogs        AuditLog[]
+  
+  @@map("admins")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// Customer Management
+model Customer {
+  id            String        @id @default(cuid())
+  uuid          String        @unique
+  name          String
+  businessName  String?
+  customerType  CustomerType  @default(INDIVIDUAL)
+  email         String        @unique
+  mobile        String        @unique
+  address       String?
+  province      String?
+  city          String?
+  street        String?
+  currency      String        @default("EGP")
+  status        CustomerStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  subscriptions  Subscription[]
+  invoices       Invoice[]
+  
+  @@map("customers")
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum CustomerStatus {
+  ACTIVE
+  DISABLED
+  ARCHIVED
+}
+
+// Package Management
+model Package {
+  id                  String       @id @default(cuid())
+  uuid                String       @unique
+  name                String
+  type                PackageType  @default(FREE)
+  price               Decimal      @default(0)
+  duration            Int          // in days
+  taxIncluded         Boolean      @default(false)
+  taxType             String?
+  taxRate             Decimal      @default(14)
+  renewalPolicy       RenewalPolicy @default(MONTHLY)
+  freeTrialDuration   Int          @default(7) // in days
+  status              PackageStatus @default(ACTIVE)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  
+  // Relations
+  subscriptions       Subscription[]
+  invoices            Invoice[]
+  
+  @@map("packages")
+}
+
+enum PackageType {
+  FREE
+  PAID
+}
+
+enum RenewalPolicy {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+}
+
+enum PackageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// Subscription Management
+model Subscription {
+  id            String              @id @default(cuid())
+  uuid          String              @unique
+  customerId    String
+  packageId     String
+  startDate     DateTime
+  endDate       DateTime
+  autoRenew     Boolean             @default(true)
+  status        SubscriptionStatus  @default(TRIAL)
+  cancelledAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  // Relations
+  customer      Customer            @relation(fields: [customerId], references: [id])
+  package       Package             @relation(fields: [packageId], references: [id])
+  invoices      Invoice[]
+  
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// Invoice Management
+model Invoice {
+  id              String          @id @default(cuid())
+  uuid            String          @unique
+  customerId      String
+  packageId       String
+  subscriptionId  String?
+  issueDate       DateTime        @default(now())
+  dueDate         DateTime
+  subtotal        Decimal
+  tax             Decimal         @default(0)
+  total           Decimal
+  paymentMethod   String          @default("WALLET_TRANSFER")
+  paymentReference String?
+  status          InvoiceStatus   @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  package         Package         @relation(fields: [packageId], references: [id])
+  subscription    Subscription?   @relation(fields: [subscriptionId], references: [id])
+  
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Audit Log
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String
+  entityType  String?  // entity_type
+  entityId    String?  // entity_id
+  oldValue    String?  // old_value (JSON)
+  newValue    String?  // new_value (JSON)
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime @default(now())
+  
+  // Relations
+  admin       Admin    @relation(fields: [adminId], references: [id])
+  
+  @@map("audit_logs")
+}
+
+// Notification System
+model Notification {
+  id          String           @id @default(cuid())
+  customerId  String?
+  type        NotificationType
+  title       String
+  message     String
+  status      NotificationStatus @default(PENDING)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime         @default(now())
+  
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SERVICE_MESSAGE
+  REMINDER
+  PUSH_NOTIFICATION
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// Backup Management
+model Backup {
+  id          String       @id @default(cuid())
+  filename    String       @unique
+  size        Int
+  type        BackupType
+  config      String       // JSON
+  encrypted   Boolean      @default(false)
+  checksum    String?
+  createdAt   DateTime     @default(now())
+  
+  @@map("backups")
+}
+
+enum BackupType {
+  MANUAL
+  AUTOMATIC
+  SCHEDULED
 }
