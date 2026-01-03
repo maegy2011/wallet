@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, SessionProvider } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Globe, User, LogOut, Menu, X, Shield, Settings, Users, BarChart3, Package } from 'lucide-react';
 import Link from 'next/link';
@@ -8,9 +8,26 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSafeSession } from '@/hooks/useSafeSession';
+import { signOutAdmin, signOutCurrentUserWithRedirect, signOutUser, isAdminUser, setAdminToken } from '@/lib/auth-utils';
+
+// Wrapper component to provide SessionProvider for Header
+function HeaderWithSession({ children }: { children: React.ReactNode }) {
+  // Always provide SessionProvider to avoid hook call order issues
+  // Admin routes will just get null session data
+  return <SessionProvider>{children}</SessionProvider>;
+}
 
 export default function Header() {
-  const { data: session } = useSession();
+  return (
+    <HeaderWithSession>
+      <HeaderContent />
+    </HeaderWithSession>
+  );
+}
+
+function HeaderContent() {
+  const { data: session } = useSafeSession();
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,10 +37,7 @@ export default function Header() {
   // Check if user is admin (has admin token)
   useEffect(() => {
     const checkAdminStatus = () => {
-      if (typeof window !== 'undefined') {
-        const adminToken = localStorage.getItem('adminToken');
-        setIsAdmin(!!adminToken);
-      }
+      setIsAdmin(isAdminUser());
     };
 
     checkAdminStatus();
@@ -33,20 +47,23 @@ export default function Header() {
       checkAdminStatus();
     };
     
-    window.addEventListener('storage', handleStorageChange);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorageChange);
+      }
     };
   }, []);
 
   // Handle admin logout
-  const handleAdminLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('adminToken');
-      setIsAdmin(false);
-      router.push('/admin');
-    }
+  const handleAdminLogout = async () => {
+    await signOutAdmin();
+    setIsAdmin(false);
+    // Redirect directly to admin page
+    window.location.href = '/admin';
   };
 
   // Helper function to get accurate header offset
@@ -148,7 +165,7 @@ export default function Header() {
   }, [pathname]);
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
+    signOutUser(); // Will use default callbackUrl of '/signin'
   };
 
   // Translated section titles

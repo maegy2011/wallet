@@ -1,15 +1,17 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, User, LogOut, Wallet, TrendingUp, Settings, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useSafeSession } from '@/hooks/useSafeSession';
+import { signOutUser } from '@/lib/auth-utils';
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSafeSession();
   const router = useRouter();
 
   if (status === 'loading') {
@@ -31,13 +33,23 @@ export default function DashboardPage() {
       
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Welcome back, {session.user?.name}!
-          </h2>
-          <p className="text-gray-600">
-            Here's an overview of your portfolio tracking.
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome back, {session.user?.name}!
+            </h2>
+            <p className="text-gray-600">
+              Here's an overview of your portfolio tracking.
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => signOutUser({ callbackUrl: '/' })}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
         </div>
 
         {/* Stats Grid */}

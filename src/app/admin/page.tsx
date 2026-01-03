@@ -23,11 +23,13 @@ import {
   Trash2,
   Plus,
   Search,
-  Filter
+  Filter,
+  LogOut
 } from 'lucide-react';
 import { ReactNextCaptcha } from '@/components/ReactNextCaptcha';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { signOutAdmin } from '@/lib/auth-utils';
 
 interface DashboardStats {
   customers: {
@@ -402,11 +404,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
+  const handleLogout = async () => {
+    await signOutAdmin();
     setIsAuthenticated(false);
     setStats(null);
     setCustomers([]);
+    // Redirect directly to admin page
+    window.location.href = '/admin';
   };
 
   if (isLoading) {
@@ -543,6 +547,22 @@ export default function AdminDashboard() {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" id="dashboard" className="space-y-6">
+            {/* Dashboard Header with Signout */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+                <p className="text-gray-600">Welcome to the Mahfza admin dashboard</p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Admin Sign Out
+              </Button>
+            </div>
+            
             {stats && (
               <>
                 {/* Stats Grid */}
